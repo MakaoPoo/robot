@@ -3,7 +3,11 @@ body {
 }
 
 #mainCanvas {
-  width: 95%;
-  height: 95%;
+  width: 1920;
+  height: 1080;
+  border: double;
+}
+#wireframe {
+  position: absolute;
   border: double;
 }

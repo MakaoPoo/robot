@@ -8,4 +8,6 @@
       document.write(script);
     }
   }
+  
+  document.write('<script src="js/stage/stage.js"></script>');
 })();
