@@ -8,12 +8,14 @@
     name
     imageSrc
     vtxList
+    groundR
 
     constructor() {
       this.id = PartsId;
       this.name = PartsName;
       this.imageSrc = new Image();
       this.vtxList = this.getVtxList();
+      this.groundR = 20;
 
       this.loadImage();
     }

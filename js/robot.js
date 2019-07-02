@@ -2,41 +2,11 @@ let scale = 5;
 let unitData;
 let stageData;
 
-const Engine = Matter.Engine;
-const Render  = Matter.Render;
-const Runner  = Matter.Runner;
-const World  = Matter.World;
-const Body = Matter.Body;
-const Bodies = Matter.Bodies;
-const Constraint = Matter.Constraint;
-const Composite = Matter.Composite;
-
-const engine = Engine.create();
-const world = engine.world;
-
-const render = Render.create({
-  canvas: $('#wireframe')[0],
-  engine: engine,
-  options: {
-    width: 1920,
-    height: 1080,
-    background: 'transparent',
-    wireframeBackground: 'transparent',
-    wireframes: true
-  }
-});
-
-Render.run(render);  //ステージを配置させる記述？
-
-Engine.run(engine);  //物理エンジンを実行？
-
 class Unit {
   parts
   partsIdList
   transform
   state
-  movingBody
-  bodyList
 
   constructor() {
     this.parts = partsListTemplate();
@@ -60,6 +30,10 @@ class Unit {
       legL: new Transform(5, 0, 0),
       back: new Transform(0, 0, 0),
       weapon: new Transform(0, 0, 0, 0.7)
+    }
+
+    this.state = {
+      speed: {x: 0, y: 0}
     }
 
   }
@@ -86,70 +60,11 @@ $(window).resize(function() {
 
 });
 
-const addStageBodies = function() {
-  const matterBodyList = [];
-
-  const bodyList = stageData.vtxList.bodyList;
-  for(const body of bodyList) {
-    for(let i = 0; i < body.length - 1; i++) {
-      const linePos1 = body[i];
-      const linePos2 = body[i + 1];
-
-      const difX = linePos1.x - linePos2.x;
-      const difY = linePos1.y - linePos2.y;
-
-      const width = Math.sqrt(difX * difX + difY * difY);
-
-      const posX = (linePos1.x + linePos2.x) / 2;
-      const posY = (linePos1.y + linePos2.y) / 2;
-
-      const rad = Math.atan2(difY, difX);
-
-      const deg = Math.abs(rad * 180 / Math.PI);
-
-      let friction = 0;
-      if(deg < 45) {
-        friction = 1;
-      }
-
-      const matterBody = Bodies.rectangle(posX, posY, width, 20, {
-        isStatic: true,
-        restitution: 0,
-        friction: 1,
-        frictionStatic: 1
-      });
-      Matter.Body.rotate(matterBody, rad);
-      matterBodyList.push(matterBody);
-    }
-  }
-
-  World.add(world, matterBodyList);
-}
-
-const addUnitBody = function(unitData) {
-
-}
-
 let rect1, rect2, cstr, comp;
 
 $(function() {
   unitData = new Unit();
   stageData = new Stage();
-
-  unitData.movingBody = Bodies.circle(500, 0, 30, {
-    restitution: 0, friction: 1, frictionStatic: 1, mass: 10
-  });
-  unitData.movingBody.collisionFilter = {
-    group: 0,
-    category: 2,
-    mask: 1
-  }
-
-  World.add(world, [unitData.movingBody]);
-
-  addStageBodies()
-
-  addUnitBody(unitData);
 
   const $canvas = $('#mainCanvas');
   $canvas[0].width = $canvas.width();
@@ -183,31 +98,26 @@ $(document).on('keyup', function(e) {
 });
 
 const mainLoop = function(){
-  const velY = unitData.movingBody.velocity.y;
-  if(keyList['a']) {
-    // Body.setVelocity(unitData.movingBody, {x: -5, y: velY});
-    Body.applyForce(unitData.movingBody, {x: unitData.movingBody.position.x, y: unitData.movingBody.position.y}, {x: -0.02, y: 0});
-  }
-  if(keyList['d']) {
-    // Body.setVelocity(unitData.movingBody, {x: 5, y: velY});
-    Body.applyForce(unitData.movingBody, {x: unitData.movingBody.position.x, y: unitData.movingBody.position.y}, {x: 0.02, y: 0});
+  // unitData.transform.body.rotate += 1;
+
+  if(keyList['a'] && !keyList['d']) {
+    unitData.state.speed.x = -5;
+  } else if(keyList['d'] && !keyList['a']) {
+    unitData.state.speed.x = 5;
+  } else {
+    unitData.state.speed.x = 0;
   }
 
-  const velX = unitData.movingBody.velocity.x;
-  if(keyList['w']) {
-    // Body.setVelocity(unitData.movingBody, {x: velX, y: -5});
-    Body.applyForce(unitData.movingBody, {x: unitData.movingBody.position.x, y: unitData.movingBody.position.y}, {x: 0, y: -0.02});
+  if(keyList['w'] && !keyList['s']) {
+    unitData.state.speed.y = -5;
+  } else if(keyList['s'] && !keyList['w']) {
+    unitData.state.speed.y = 5;
+  } else {
+    unitData.state.speed.y = 0;
   }
-  if(keyList['s']) {
-    // Body.setVelocity(unitData.movingBody, {x: velX, y: 5});
-    Body.applyForce(unitData.movingBody, {x: unitData.movingBody.position.x, y: unitData.movingBody.position.y}, {x: 0, y: 0.02});
-  }
-  // Body.setAngle(unitData.movingBody, 0);
 
-  unitData.transform.body.x = unitData.movingBody.position.x;
-  unitData.transform.body.y = unitData.movingBody.position.y;
-
-  // unitData.transform.body.rotate = unitData.movingBody.angle * 180 / Math.PI;
+  unitData.transform.body.x += unitData.state.speed.x;
+  unitData.transform.body.y += unitData.state.speed.y;
 
   draw();
 
@@ -228,11 +138,22 @@ const draw = function() {
   drawBody(ctx, unitData, 0, new Transform());
   drawBack(ctx, unitData, 0, new Transform());
   drawLegL(ctx, unitData, 0, new Transform());
-  drawWeapon(ctx, unitData, 0, new Transform(0, 0, 0));
-  drawArmL(ctx, unitData, 0, new Transform());
-  drawShldL(ctx, unitData, 0, new Transform());
-  drawWeapon(ctx, unitData, 1, new Transform(0, 0, 0));
+  // drawWeapon(ctx, unitData, 0, new Transform(0, 0, 0));
+  // drawArmL(ctx, unitData, 0, new Transform());
+  // drawShldL(ctx, unitData, 0, new Transform());
+  // drawWeapon(ctx, unitData, 1, new Transform(0, 0, 0));
 
+  const bodyTransform = unitData.transform.body;
+  const legJoint = unitData.parts.body.joint.leg;
+  const collisionR = unitData.parts.body.collisionR;
+  const groundR = unitData.parts.leg.groundR;
+  ctx.strokeStyle = "#0f0";
+  ctx.beginPath();
+  ctx.arc(bodyTransform.x, bodyTransform.y, collisionR, 0, Math.PI * 2, false);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(bodyTransform.x + legJoint.x, bodyTransform.y + legJoint.y, groundR, 0, Math.PI * 2, false);
+  ctx.stroke();
 }
 
 const drawBody = function(ctx, unitData, vtxId, imageTransform) {
@@ -601,7 +522,36 @@ const drawParts = function(ctx, drawOption, partsData, vtxId) {
 const drawStage = function(ctx) {
   ctx.drawImage(stageData.imageSrc, 0, 0);
 
+  if(DRAW_HITBOX) {
+    for(const obj of stageData.objList) {
+      if(obj.type == 'line') {
+        for(let i = 0; i < obj.lineList.length - 1; i++) {
+          const line1 = obj.lineList[i];
+          const line2 = obj.lineList[i + 1];
 
+          ctx.strokeStyle = "#f00";
+          ctx.beginPath();
+          ctx.moveTo(line1.x, line1.y);
+          ctx.lineTo(line2.x, line2.y);
+          ctx.stroke();
+
+          const nx1 = (line1.x + line2.x) / 2;
+          const ny1 = (line1.y + line2.y) / 2;
+
+          const nx2 = -(line1.y - line2.y);
+          const ny2 = (line1.x - line2.x);
+
+          const nLength = Math.sqrt(nx2*nx2 + ny2*ny2) / 50;
+
+          ctx.strokeStyle = "#0f0";
+          ctx.beginPath();
+          ctx.moveTo(nx1, ny1);
+          ctx.lineTo(nx1 + nx2 / nLength, ny1 + ny2 / nLength);
+          ctx.stroke();
+        }
+      }
+    }
+  }
 }
 
 const drawImage = function(ctx, image, sx, sy, sw, sh, dx, dy, dw, dh) {

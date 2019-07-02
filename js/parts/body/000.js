@@ -9,6 +9,7 @@
     imageSrc
     vtxList
     joint
+    collisionR
 
     constructor() {
       this.id = PartsId;
@@ -16,11 +17,12 @@
       this.imageSrc = new Image();
       this.vtxList = this.getVtxList();
       this.joint = {
-        arm: {x: 9, y: -11},
-        shld: {x: 9, y: -25},
-        leg: {x: 2, y: 9},
-        back: {x: 22, y: -32}
+        arm: {x: 9, y: 1},
+        shld: {x: 9, y: -13},
+        leg: {x: 2, y: 21},
+        back: {x: 22, y: -20}
       };
+      this.collisionR = 27;
 
       this.loadImage();
     }
@@ -37,7 +39,7 @@
         {
           imagePos: {x: 0, y: 0, w: 64, h: 64},
           hitbox: {x: 14, y: 14, w: 45, h: 42},
-          pivot: {x: 40, y: 45}
+          pivot: {x: 40, y: 33}
         }
       ];
 
