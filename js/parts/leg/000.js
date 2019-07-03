@@ -15,7 +15,7 @@
       this.name = PartsName;
       this.imageSrc = new Image();
       this.vtxList = this.getVtxList();
-      this.groundR = 20;
+      this.groundR = 22;
 
       this.loadImage();
     }

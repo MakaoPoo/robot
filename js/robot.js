@@ -60,8 +60,6 @@ $(window).resize(function() {
 
 });
 
-let rect1, rect2, cstr, comp;
-
 $(function() {
   unitData = new Unit();
   stageData = new Stage();
@@ -109,19 +107,75 @@ const mainLoop = function(){
   }
 
   if(keyList['w'] && !keyList['s']) {
-    unitData.state.speed.y = -5;
+    unitData.state.speed.y -= 5;
   } else if(keyList['s'] && !keyList['w']) {
-    unitData.state.speed.y = 5;
+    unitData.state.speed.y += 5;
   } else {
-    unitData.state.speed.y = 0;
+    // unitData.state.speed.y = 0;
+    unitData.state.speed.y += 1;
   }
 
-  unitData.transform.body.x += unitData.state.speed.x;
-  unitData.transform.body.y += unitData.state.speed.y;
+  if(unitData.state.speed.y >= 10) {
+    unitData.state.speed.y = 10;
+  }
+  if(unitData.state.speed.y <= -10) {
+    unitData.state.speed.y = -10;
+  }
+
+  advanceFrame();
 
   draw();
 
   requestAnimationFrame(mainLoop);
+}
+
+const advanceFrame = function() {
+  for(let frame = 0; frame < FRAME_SPLIT; frame ++) {
+
+    advanceOneFrame();
+  }
+}
+
+const advanceOneFrame = function() {
+  unitData.transform.body.x += unitData.state.speed.x / FRAME_SPLIT;
+  // unitData.transform.body.y += unitData.state.speed.y / FRAME_SPLIT;
+
+  let isGround = false;
+
+  const bodyTransform = unitData.transform.body;
+  const legJoint = unitData.parts.body.joint.leg;
+
+  const groundHitCircle = {
+    x: bodyTransform.x + legJoint.x,
+    y: bodyTransform.y + legJoint.y,
+    r: unitData.parts.leg.groundR
+  }
+
+  for(const obj of stageData.staticObjList) {
+    if(obj.type == 'line') {
+      const cVec1 = {x: groundHitCircle.x - obj.pos1.x, y: groundHitCircle.y - obj.pos1.y};
+      const cVec2 = {x: groundHitCircle.x - obj.pos2.x, y: groundHitCircle.y - obj.pos2.y};
+      if(getDot(obj.vec, cVec1) * getDot(obj.vec, cVec2) <= 0) {
+        const d = Math.abs(getCrossZ(obj.vec, cVec1)) / obj.length;
+        if(d < groundHitCircle.r) {
+          isGround = true;
+        }
+      } else {
+        const r2 = groundHitCircle.r * groundHitCircle.r;
+        if(getDot(cVec1, cVec1) < r2 || getDot(cVec2, cVec2) < r2) {
+          isGround = true;
+        }
+      }
+    }
+  }
+
+  if(unitData.state.speed.y > 0) {
+    if(!isGround) {
+      unitData.transform.body.y += unitData.state.speed.y / FRAME_SPLIT;
+    }
+  } else {
+    unitData.transform.body.y += unitData.state.speed.y / FRAME_SPLIT;
+  }
 }
 
 const draw = function() {
@@ -523,32 +577,22 @@ const drawStage = function(ctx) {
   ctx.drawImage(stageData.imageSrc, 0, 0);
 
   if(DRAW_HITBOX) {
-    for(const obj of stageData.objList) {
+    for(const obj of stageData.staticObjList) {
       if(obj.type == 'line') {
-        for(let i = 0; i < obj.lineList.length - 1; i++) {
-          const line1 = obj.lineList[i];
-          const line2 = obj.lineList[i + 1];
+        ctx.strokeStyle = "#f00";
+        ctx.beginPath();
+        ctx.moveTo(obj.pos1.x, obj.pos1.y);
+        ctx.lineTo(obj.pos2.x, obj.pos2.y);
+        ctx.stroke();
 
-          ctx.strokeStyle = "#f00";
-          ctx.beginPath();
-          ctx.moveTo(line1.x, line1.y);
-          ctx.lineTo(line2.x, line2.y);
-          ctx.stroke();
+        const nx = (obj.pos1.x + obj.pos2.x) / 2;
+        const ny = (obj.pos1.y + obj.pos2.y) / 2;
 
-          const nx1 = (line1.x + line2.x) / 2;
-          const ny1 = (line1.y + line2.y) / 2;
-
-          const nx2 = -(line1.y - line2.y);
-          const ny2 = (line1.x - line2.x);
-
-          const nLength = Math.sqrt(nx2*nx2 + ny2*ny2) / 50;
-
-          ctx.strokeStyle = "#0f0";
-          ctx.beginPath();
-          ctx.moveTo(nx1, ny1);
-          ctx.lineTo(nx1 + nx2 / nLength, ny1 + ny2 / nLength);
-          ctx.stroke();
-        }
+        ctx.strokeStyle = "#0f0";
+        ctx.beginPath();
+        ctx.moveTo(nx, ny);
+        ctx.lineTo(nx + obj.nVec.x * 50, ny + obj.nVec.y * 50);
+        ctx.stroke();
       }
     }
   }

@@ -50,6 +50,16 @@ const PARTS_CLASS_LIST = partsListTemplate({}, {}, {}, {}, {}, {});
 
 const DRAW_HITBOX = true;
 
+const FRAME_SPLIT = 10;
+
+const getDot = function(vec1, vec2) {
+  return vec1.x * vec2.x + vec1.y * vec2.y;
+}
+
+const getCrossZ = function(vec1, vec2) {
+  return vec1.x * vec2.y - vec1.y * vec2.x;
+}
+
 const getRad = function(deg) {
   return deg * Math.PI / 180;
 }
