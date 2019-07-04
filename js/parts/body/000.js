@@ -45,6 +45,19 @@
 
       return vtxList;
     }
+
+    getImageList(unitData) {
+      const bodyTransform = unitData.getBodyPartsTransform();
+      const imageList = [
+        {
+          id: 0,
+          transform: addTransform(bodyTransform, new Transform(0, 0, 0, 1)),
+          zIndex: 0
+        }
+      ];
+
+      return imageList;
+    }
   }
 
   PARTS_CLASS_LIST[PartsType][PartsId] = Body000;

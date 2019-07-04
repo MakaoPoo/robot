@@ -48,7 +48,7 @@ const ALL_PARTS_NUMS = partsListTemplate(1, 1, 1, 1, 1, 1);
 
 const PARTS_CLASS_LIST = partsListTemplate({}, {}, {}, {}, {}, {});
 
-const DRAW_HITBOX = true;
+const DRAW_HITBOX = false;
 
 const FRAME_SPLIT = 10;
 
@@ -64,9 +64,27 @@ const getRad = function(deg) {
   return deg * Math.PI / 180;
 }
 
+const getDeg = function(rad) {
+  return rad * 180 / Math.PI;
+}
+
 const rotateVec = function(x, y, deg) {
     const rotateX = Math.cos(getRad(deg)) * x - Math.sin(getRad(deg)) * y;
     const rotateY = Math.sin(getRad(deg)) * x + Math.cos(getRad(deg)) * y;
 
     return {x: rotateX, y: rotateY};
+}
+
+const addTransform = function(tf1, tf2) {
+  const rotate = tf1.rotate + tf2.rotate;
+  const scale = tf1.scale * tf2.scale;
+
+  const rotateTf2 = rotateVec(tf2.x, tf2.y, tf1.rotate);
+
+  return {
+    x: tf1.x + rotateTf2.x * tf1.scale,
+    y: tf1.y + rotateTf2.y * tf1.scale,
+    rotate: rotate,
+    scale: scale
+  }
 }

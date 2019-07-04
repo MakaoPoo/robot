@@ -38,6 +38,21 @@
 
       return vtxList;
     }
+
+    getImageList(unitData) {
+      const legRTransform = unitData.getLegRPartsTransform();
+      const legLTransform = unitData.getLegLPartsTransform();
+      const imageList = [
+        {
+          id: 0,
+          transform: addTransform(legRTransform, new Transform(0, 0, 0, 1)),
+          mirror: false,
+          zIndex: 0
+        }
+      ];
+
+      return imageList;
+    }
   }
 
   PARTS_CLASS_LIST[PartsType][PartsId] = Leg000;
