@@ -31,8 +31,8 @@ class Unit {
       armL: new Transform(0, 0, 45),
       shldR: new Transform(-5, 0, -10),
       shldL: new Transform(0, 0, -10),
-      legR: new Transform(0, 0, 0),
-      legL: new Transform(5, 0, 0),
+      legR: new Transform(-5, 0, 0),
+      legL: new Transform(0, 0, 0),
       back: new Transform(0, 0, 0),
       weapon: new Transform(0, 0, 0, 0.7)
     }
@@ -42,7 +42,10 @@ class Unit {
       speed: {x: 0, y: 0},
       maxSpeed: {x: 10, y: 10},
       dirLeft: true,
-      isGround: false
+      ground: {
+        flag: false,
+        angle: 0
+      }
     }
 
     this.input = {
@@ -76,7 +79,7 @@ class Unit {
     }
   }
 
-  updateStateByInput() {
+  updateUnitState() {
     if(this.input.keyList['a'] && !this.input.keyList['d']) {
       this.state.speed.x -= 5;
     } else if(this.input.keyList['d'] && !this.input.keyList['a']) {
@@ -101,6 +104,16 @@ class Unit {
     }
     if(this.state.speed.y <= -this.state.maxSpeed.y) {
       this.state.speed.y = -this.state.maxSpeed.y;
+    }
+
+    for(const type in this.parts) {
+      const partsData = this.parts[type];
+      if(!partsData.updatePartsState) {
+        continue;
+      }
+
+      partsData.updatePartsState(this);
+
     }
   }
 
@@ -357,7 +370,7 @@ $(document).on('mousemove', function(e) {
 const mainLoop = function(){
   unitData[0].dirTurn();
 
-  unitData[0].updateStateByInput();
+  unitData[0].updateUnitState();
 
   advanceFrame();
 
@@ -369,6 +382,9 @@ const mainLoop = function(){
 }
 
 const advanceFrame = function() {
+  unitData[0].state.ground.flag = false;
+  unitData[0].state.ground.angle = FLOOR_BORDER_ANGLE;
+
   for(let frame = 0; frame < FRAME_SPLIT; frame ++) {
     advanceOneFrame();
   }
@@ -388,6 +404,7 @@ const advanceFrame = function() {
 
 const advanceOneFrame = function() {
   unitData[0].transform.unit.x += unitData[0].state.speed.x / FRAME_SPLIT;
+  unitData[0].transform.unit.y += unitData[0].state.speed.y / FRAME_SPLIT;
 
   const unitTransform = unitData[0].transform.unit;
   const legJoint = unitData[0].parts.body.joint.leg;
@@ -398,48 +415,45 @@ const advanceOneFrame = function() {
     r: unitData[0].parts.leg.groundR
   }
 
-  let isGround = false;
   let shortestD = groundHitCircle.r;
-  let legAngle = 0;
+  let nearestNvec;
+  let isGround = false;
 
   for(const obj of stageData.staticObjList) {
     if(obj.type == 'line') {
       const lineAngle = getDeg(Math.atan2(obj.vec.y, obj.vec.x));
-      if(Math.abs(lineAngle) > 50) {
-        continue;
-      }
-
       const cVec1 = {x: groundHitCircle.x - obj.pos1.x, y: groundHitCircle.y - obj.pos1.y};
       const cVec2 = {x: groundHitCircle.x - obj.pos2.x, y: groundHitCircle.y - obj.pos2.y};
-      if(getDot(obj.vec, cVec1) * getDot(obj.vec, cVec2) <= 0) {
-        const d = Math.abs(getCrossZ(obj.vec, cVec1)) / obj.length;
+      if(Math.abs(lineAngle) <= FLOOR_BORDER_ANGLE) {
+        let d;
+
+        if(getDot(obj.vec, cVec1) * getDot(obj.vec, cVec2) <= 0) {
+          d = Math.abs(getCrossZ(obj.vec, cVec1)) / obj.length;
+        } else {
+          const r1 = getDot(cVec1, cVec1);
+          const r2 = getDot(cVec2, cVec2);
+          d = Math.sqrt(r1 < r2? r1: r2);
+        }
         if(d < groundHitCircle.r) {
+          unitData[0].state.ground.flag = true;
           isGround = true;
           if(d < shortestD) {
             shortestD = d;
-            if(Math.abs(unitData[0].state.speed.x) <= 0) {
-              legAngle = lineAngle * (unitData[0].state.dirLeft? 1: -1);
-            }
+            nearestNvec = obj.nVec;
+            unitData[0].state.ground.angle = lineAngle;
           }
         }
+
       } else {
-        const r2 = groundHitCircle.r * groundHitCircle.r;
-        if(getDot(cVec1, cVec1) < r2 || getDot(cVec2, cVec2) < r2) {
-          isGround = true;
-        }
+
       }
+
     }
   }
 
-  unitData[0].transform.legL.rotate = legAngle;
-  unitData[0].transform.legR.rotate = legAngle;
-
-  if(unitData[0].state.speed.y > 0) {
-    if(!isGround) {
-      unitData[0].transform.unit.y += unitData[0].state.speed.y / FRAME_SPLIT;
-    }
-  } else {
-    unitData[0].transform.unit.y += unitData[0].state.speed.y / FRAME_SPLIT;
+  if(isGround) {
+    const pushY = nearestNvec.y * (groundHitCircle.r - shortestD);
+    unitData[0].transform.unit.y += pushY / Math.cos(getRad(unitData[0].state.ground.angle));
   }
 }
 
@@ -450,6 +464,17 @@ const draw = function() {
   const ctx = $canvas[0].getContext('2d');
 
   drawStage(ctx);
+
+  unitData[0].imageList.sort(function(a, b) {
+    if(a.zIndex < b.zIndex) {
+      return 1;
+    }
+    if(a.zIndex > b.zIndex) {
+      return -1;
+    }
+
+    return 0;
+  });
 
   for(const image of unitData[0].imageList) {
     const imageSrc = image.imageSrc;
@@ -477,17 +502,25 @@ const draw = function() {
 
     ctx.restore();
 
-    // const unitTransform = unitData[0].transform.unit;
-    // const legJoint = unitData[0].parts.body.joint.leg;
-    // const collisionR = unitData[0].parts.body.collisionR;
-    // const groundR = unitData[0].parts.leg.groundR;
-    // ctx.strokeStyle = "#0f0";
-    // ctx.beginPath();
-    // ctx.arc(unitTransform.x, unitTransform.y, collisionR, 0, Math.PI * 2, false);
-    // ctx.stroke();
-    // ctx.beginPath();
-    // ctx.arc(unitTransform.x + legJoint.x, unitTransform.y + legJoint.y, groundR, 0, Math.PI * 2, false);
-    // ctx.stroke();
+    ctx.strokeStyle = "#f00";
+    ctx.beginPath();
+    ctx.arc(unitData[0].input.mouse.x, unitData[0].input.mouse.y, 25, 0, Math.PI * 2, false);
+    ctx.stroke();
+
+    if(DRAW_HITBOX) {
+      const unitTransform = unitData[0].transform.unit;
+      const legJoint = unitData[0].parts.body.joint.leg;
+      const collisionR = unitData[0].parts.body.collisionR;
+      const groundR = unitData[0].parts.leg.groundR;
+      ctx.strokeStyle = "#0f0";
+      ctx.beginPath();
+      ctx.arc(unitTransform.x, unitTransform.y, collisionR, 0, Math.PI * 2, false);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(unitTransform.x + legJoint.x, unitTransform.y + legJoint.y, groundR, 0, Math.PI * 2, false);
+      ctx.stroke();
+    }
+
   }
 
   // if(unitData[0].state.dirLeft) {
@@ -514,369 +547,6 @@ const draw = function() {
   //   drawWeapon(ctx, unitData, 1, new Transform(0, 0, 0));
   // }
   //
-}
-
-const drawBody = function(ctx, unitData, vtxId, imageTransform) {
-  const bodyData = unitData[0].parts.body;
-  const imageVtx = bodyData.vtxList[vtxId].imagePos;
-  const pivotVtx = bodyData.vtxList[vtxId].pivot;
-  const bodyTransform = unitData[0].transform.body;
-
-  const imageX = -pivotVtx.x;
-  const imageY = -pivotVtx.y;
-  const imageW = imageVtx.w;
-  const imageH = imageVtx.h;
-
-  ctx.save();
-  ctx.translate(bodyTransform.x, bodyTransform.y);
-  ctx.rotate(getRad(bodyTransform.rotate));
-  ctx.scale(bodyTransform.scale, bodyTransform.scale);
-  ctx.translate(imageTransform.x, imageTransform.y);
-  ctx.rotate(getRad(imageTransform.rotate));
-  ctx.scale(imageTransform.scale, imageTransform.scale);
-
-  drawImage(ctx, bodyData.imageSrc,
-    imageVtx.x, imageVtx.y, imageVtx.w, imageVtx.h,
-    imageX, imageY, imageW, imageH
-  );
-
-  if(DRAW_HITBOX) {
-    const hitboxVtx = bodyData.vtxList[vtxId].hitbox;
-    const hx = imageX + hitboxVtx.x;
-    const hy = imageY + hitboxVtx.y;
-
-    ctx.fillStyle = "rgba(0, 0, 255, 0.3)";
-    ctx.strokeStyle = "rgba(0, 0, 255, 0.7)";
-    ctx.lineWidth = 1;
-    ctx.fillRect(hx, hy, hitboxVtx.w, hitboxVtx.h);
-    ctx.strokeRect(hx, hy, hitboxVtx.w, hitboxVtx.h);
-  }
-
-  ctx.restore();
-}
-
-const drawArmL = function(ctx, unitData, vtxId, imageTransform) {
-  drawArm(ctx, unitData, vtxId, imageTransform, true);
-}
-
-const drawArmR = function(ctx, unitData, vtxId, imageTransform) {
-  drawArm(ctx, unitData, vtxId, imageTransform, false);
-}
-
-const drawArm = function(ctx, unitData, vtxId, imageTransform, isLeft) {
-  const armData = unitData[0].parts.arm;
-  const imageVtx = armData.vtxList[vtxId].imagePos;
-  const pivotVtx = armData.vtxList[vtxId].pivot;
-  const armTransform = (isLeft)?unitData[0].transform.armL: unitData[0].transform.armR;
-
-  const parentTransform = getArmParentTransform(unitData);
-
-  const imageX = -pivotVtx.x;
-  const imageY = -pivotVtx.y;
-  const imageW = imageVtx.w;
-  const imageH = imageVtx.h;
-
-  ctx.save();
-  ctx.translate(parentTransform.x, parentTransform.y);
-  ctx.rotate(getRad(parentTransform.rotate));
-  ctx.translate(parentTransform.jointX, parentTransform.jointY);
-  ctx.translate(armTransform.x, armTransform.y);
-  ctx.rotate(getRad(armTransform.rotate));
-  ctx.scale(armTransform.scale, armTransform.scale);
-  ctx.translate(imageTransform.x, imageTransform.y);
-  ctx.rotate(getRad(imageTransform.rotate));
-  ctx.scale(imageTransform.scale, imageTransform.scale);
-
-  drawImage(ctx, armData.imageSrc,
-    imageVtx.x, imageVtx.y, imageVtx.w, imageVtx.h,
-    imageX, imageY, imageW, imageH
-  );
-
-  if(DRAW_HITBOX) {
-    const hitboxVtx = armData.vtxList[vtxId].hitbox;
-    const hx = imageX + hitboxVtx.x;
-    const hy = imageY + hitboxVtx.y;
-
-    ctx.fillStyle = "rgba(0, 0, 255, 0.3)";
-    ctx.strokeStyle = "rgba(0, 0, 255, 0.7)";
-    ctx.lineWidth = 1;
-    ctx.fillRect(hx, hy, hitboxVtx.w, hitboxVtx.h);
-    ctx.strokeRect(hx, hy, hitboxVtx.w, hitboxVtx.h);
-  }
-
-  ctx.restore();
-}
-
-const getArmParentTransform = function(unitData) {
-  const bodyData = unitData[0].parts.body;
-
-  const armPosVtx = bodyData.joint.arm;
-  const bodyTransform = unitData[0].transform.body;
-
-  const armParentX = bodyTransform.x;
-  const armParentY = bodyTransform.y;
-
-  return {jointX: armPosVtx.x * bodyTransform.scale, jointY: armPosVtx.y * bodyTransform.scale,
-    x: armParentX, y: armParentY, rotate: bodyTransform.rotate
-  };
-}
-
-const drawShldL = function(ctx, unitData, vtxId, imageTransform) {
-  drawShld(ctx, unitData, vtxId, imageTransform, true);
-}
-
-const drawShldR = function(ctx, unitData, vtxId, imageTransform) {
-  drawShld(ctx, unitData, vtxId, imageTransform, false);
-}
-
-const drawShld = function(ctx, unitData, vtxId, imageTransform, isLeft) {
-  const shldData = unitData[0].parts.shld;
-  const imageVtx = shldData.vtxList[vtxId].imagePos;
-  const pivotVtx = shldData.vtxList[vtxId].pivot;
-  const shldTransform = (isLeft)?unitData[0].transform.shldL: unitData[0].transform.shldR;
-
-  const parentTransform = getShldParentTransform(unitData);
-
-  const imageX = -pivotVtx.x;
-  const imageY = -pivotVtx.y;
-  const imageW = imageVtx.w;
-  const imageH = imageVtx.h;
-
-  ctx.save();
-  ctx.translate(parentTransform.x, parentTransform.y);
-  ctx.rotate(getRad(parentTransform.rotate));
-  ctx.translate(parentTransform.jointX, parentTransform.jointY);
-  ctx.translate(shldTransform.x, shldTransform.y);
-  ctx.rotate(getRad(shldTransform.rotate));
-  ctx.scale(shldTransform.scale, shldTransform.scale);
-  ctx.translate(imageTransform.x, imageTransform.y);
-  ctx.rotate(getRad(imageTransform.rotate));
-  ctx.scale(imageTransform.scale, imageTransform.scale);
-
-  drawImage(ctx, shldData.imageSrc,
-    imageVtx.x, imageVtx.y, imageVtx.w, imageVtx.h,
-    imageX, imageY, imageW, imageH
-  );
-
-  if(DRAW_HITBOX) {
-    const hitboxVtx = shldData.vtxList[vtxId].hitbox;
-    const hx = imageX + hitboxVtx.x;
-    const hy = imageY + hitboxVtx.y;
-
-    ctx.fillStyle = "rgba(0, 0, 255, 0.3)";
-    ctx.strokeStyle = "rgba(0, 0, 255, 0.7)";
-    ctx.lineWidth = 1;
-    ctx.fillRect(hx, hy, hitboxVtx.w, hitboxVtx.h);
-    ctx.strokeRect(hx, hy, hitboxVtx.w, hitboxVtx.h);
-  }
-
-  ctx.restore();
-}
-
-const getShldParentTransform = function(unitData) {
-  const bodyData = unitData[0].parts.body;
-
-  const shldPosVtx = bodyData.joint.shld;
-  const bodyTransform = unitData[0].transform.body;
-
-  const shldParentX = bodyTransform.x;
-  const shldParentY = bodyTransform.y;
-
-  return {jointX: shldPosVtx.x * bodyTransform.scale, jointY: shldPosVtx.y * bodyTransform.scale,
-    x: shldParentX, y: shldParentY, rotate: bodyTransform.rotate
-  };
-}
-
-const drawLegL = function(ctx, unitData, vtxId, imageTransform) {
-  drawLeg(ctx, unitData, vtxId, imageTransform, true);
-}
-
-const drawLegR = function(ctx, unitData, vtxId, imageTransform) {
-  drawLeg(ctx, unitData, vtxId, imageTransform, false);
-}
-
-const drawLeg = function(ctx, unitData, vtxId, imageTransform, isLeft) {
-  const legData = unitData[0].parts.leg;
-  const imageVtx = legData.vtxList[vtxId].imagePos;
-  const pivotVtx = legData.vtxList[vtxId].pivot;
-  const legTransform = (isLeft)?unitData[0].transform.legL: unitData[0].transform.legR;
-
-  const parentTransform = getLegParentTransform(unitData);
-
-  const imageX = -pivotVtx.x;
-  const imageY = -pivotVtx.y;
-  const imageW = imageVtx.w;
-  const imageH = imageVtx.h;
-
-  ctx.save();
-  ctx.translate(parentTransform.x, parentTransform.y);
-  ctx.rotate(getRad(parentTransform.rotate));
-  ctx.translate(parentTransform.jointX, parentTransform.jointY);
-  ctx.translate(legTransform.x, legTransform.y);
-  ctx.rotate(getRad(legTransform.rotate));
-  ctx.scale(legTransform.scale, legTransform.scale);
-  ctx.translate(imageTransform.x, imageTransform.y);
-  ctx.rotate(getRad(imageTransform.rotate));
-  ctx.scale(imageTransform.scale, imageTransform.scale);
-
-  drawImage(ctx, legData.imageSrc,
-    imageVtx.x, imageVtx.y, imageVtx.w, imageVtx.h,
-    imageX, imageY, imageW, imageH
-  );
-
-  if(DRAW_HITBOX) {
-    const hitboxVtx = legData.vtxList[vtxId].hitbox;
-    const hx = imageX + hitboxVtx.x;
-    const hy = imageY + hitboxVtx.y;
-
-    ctx.fillStyle = "rgba(0, 0, 255, 0.3)";
-    ctx.strokeStyle = "rgba(0, 0, 255, 0.7)";
-    ctx.lineWidth = 1;
-    ctx.fillRect(hx, hy, hitboxVtx.w, hitboxVtx.h);
-    ctx.strokeRect(hx, hy, hitboxVtx.w, hitboxVtx.h);
-  }
-
-  ctx.restore();
-}
-
-const getLegParentTransform = function(unitData) {
-  const bodyData = unitData[0].parts.body;
-
-  const legPosVtx = bodyData.joint.leg;
-  const bodyTransform = unitData[0].transform.body;
-
-  const legParentX = bodyTransform.x;
-  const legParentY = bodyTransform.y;
-
-  return {jointX: legPosVtx.x * bodyTransform.scale, jointY: legPosVtx.y * bodyTransform.scale,
-    x: legParentX, y: legParentY, rotate: bodyTransform.rotate
-  };
-}
-
-const drawBack = function(ctx, unitData, vtxId, imageTransform) {
-  const backData = unitData[0].parts.back;
-  const imageVtx = backData.vtxList[vtxId].imagePos;
-  const pivotVtx = backData.vtxList[vtxId].pivot;
-  const backTransform = unitData[0].transform.back;
-
-  const parentTransform = getBackParentTransform(unitData);
-
-  const imageX = -pivotVtx.x;
-  const imageY = -pivotVtx.y;
-  const imageW = imageVtx.w;
-  const imageH = imageVtx.h;
-
-  ctx.save();
-  ctx.translate(parentTransform.x, parentTransform.y);
-  ctx.rotate(getRad(parentTransform.rotate));
-  ctx.translate(parentTransform.jointX, parentTransform.jointY);
-  ctx.translate(backTransform.x, backTransform.y);
-  ctx.rotate(getRad(backTransform.rotate));
-  ctx.scale(backTransform.scale, backTransform.scale);
-  ctx.translate(imageTransform.x, imageTransform.y);
-  ctx.rotate(getRad(imageTransform.rotate));
-  ctx.scale(imageTransform.scale, imageTransform.scale);
-
-  drawImage(ctx, backData.imageSrc,
-    imageVtx.x, imageVtx.y, imageVtx.w, imageVtx.h,
-    imageX, imageY, imageW, imageH
-  );
-
-  if(DRAW_HITBOX) {
-    const hitboxVtx = backData.vtxList[vtxId].hitbox;
-    const hx = imageX + hitboxVtx.x;
-    const hy = imageY + hitboxVtx.y;
-
-    ctx.fillStyle = "rgba(0, 0, 255, 0.3)";
-    ctx.strokeStyle = "rgba(0, 0, 255, 0.7)";
-    ctx.lineWidth = 1;
-    ctx.fillRect(hx, hy, hitboxVtx.w, hitboxVtx.h);
-    ctx.strokeRect(hx, hy, hitboxVtx.w, hitboxVtx.h);
-  }
-
-  ctx.restore();
-}
-
-const getBackParentTransform = function(unitData) {
-  const bodyData = unitData[0].parts.body;
-
-  const backPosVtx = bodyData.joint.back;
-  const bodyTransform = unitData[0].transform.body;
-
-  const backParentX = bodyTransform.x;
-  const backParentY = bodyTransform.y;
-
-  return {jointX: backPosVtx.x * bodyTransform.scale, jointY: backPosVtx.y * bodyTransform.scale,
-    x: backParentX, y: backParentY, rotate: bodyTransform.rotate
-  };
-}
-
-const drawWeapon = function(ctx, unitData, vtxId, imageTransform) {
-  const weaponData = unitData[0].parts.weapon;
-  const imageVtx = weaponData.vtxList[vtxId].imagePos;
-  const pivotVtx = weaponData.vtxList[vtxId].pivot;
-  const weaponTransform = unitData[0].transform.weapon;
-
-  const parentTransform = getWeaponParentTransform(unitData);
-
-  const imageX = -pivotVtx.x;
-  const imageY = -pivotVtx.y;
-  const imageW = imageVtx.w;
-  const imageH = imageVtx.h;
-
-  ctx.save();
-  ctx.translate(parentTransform.x, parentTransform.y);
-  ctx.rotate(getRad(parentTransform.rotate));
-  ctx.translate(weaponTransform.x, weaponTransform.y);
-  ctx.rotate(getRad(weaponTransform.rotate));
-  ctx.scale(weaponTransform.scale, weaponTransform.scale);
-  ctx.translate(imageTransform.x, imageTransform.y);
-  ctx.rotate(getRad(imageTransform.rotate));
-  ctx.scale(imageTransform.scale, imageTransform.scale);
-
-  drawImage(ctx, weaponData.imageSrc,
-    imageVtx.x, imageVtx.y, imageVtx.w, imageVtx.h,
-    imageX, imageY, imageW, imageH
-  );
-
-  ctx.restore();
-}
-
-const getWeaponParentTransform = function(unitData) {
-  const bodyData = unitData[0].parts.body;
-  const armData = unitData[0].parts.arm;
-
-  const armPosVtx = bodyData.joint.arm;
-  const bodyTransform = unitData[0].transform.body;
-
-  const handPosVtx = armData.joint.hand;
-  const armLTransform = unitData[0].transform.armL;
-
-  const weaponParentRotate = bodyTransform.rotate + armLTransform.rotate;
-
-  const armPos = rotateVec(armPosVtx.x, armPosVtx.y, bodyTransform.rotate);
-  const handPos = rotateVec(handPosVtx.x, handPosVtx.y, weaponParentRotate);
-
-  const weaponParentX = bodyTransform.x + armPos.x * bodyTransform.scale + armLTransform.x + handPos.x * armLTransform.scale;
-  const weaponParentY = bodyTransform.y + armPos.y * bodyTransform.scale + armLTransform.y + handPos.y * armLTransform.scale;
-
-  return {x: weaponParentX, y: weaponParentY, rotate: weaponParentRotate};
-}
-
-const drawParts = function(ctx, drawOption, partsData, vtxId) {
-
-  const imageVtx = partsData.vtxList[vtxId].imagePos;
-
-  drawImage(ctx, partsData.imageSrc,
-    imageVtx.x, imageVtx.y, imageVtx.w, imageVtx.h,
-    drawOption.dx, drawOption.dy,
-    imageVtx.w, imageVtx.h
-  );
-
-  if(DRAW_HITBOX) {
-    const hitboxVtx = partsData.vtxList[vtxId].hitbox;
-    drawHitbox(ctx, drawOption, hitboxVtx);
-  }
 }
 
 const drawStage = function(ctx) {

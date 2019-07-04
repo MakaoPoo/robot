@@ -48,9 +48,11 @@ const ALL_PARTS_NUMS = partsListTemplate(1, 1, 1, 1, 1, 1);
 
 const PARTS_CLASS_LIST = partsListTemplate({}, {}, {}, {}, {}, {});
 
-const DRAW_HITBOX = false;
+const DRAW_HITBOX = true;
 
 const FRAME_SPLIT = 10;
+
+const FLOOR_BORDER_ANGLE = 50;
 
 const getDot = function(vec1, vec2) {
   return vec1.x * vec2.x + vec1.y * vec2.y;
@@ -87,4 +89,8 @@ const addTransform = function(tf1, tf2) {
     rotate: rotate,
     scale: scale
   }
+}
+
+const turnRotate = function(rotate, isLeft) {
+  return rotate * (isLeft? 1: -1)
 }
