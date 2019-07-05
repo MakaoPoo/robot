@@ -17,10 +17,15 @@
       this.imageSrc = new Image();
       this.vtxList = this.getVtxList();
       this.joint = {
-        arm: {x: 9, y: 1},
-        shld: {x: 9, y: -13},
-        leg: {x: 2, y: 21},
-        back: {x: 22, y: -20}
+        body: {x: 0, y: 0, parent: null},
+        armR: {x: 9, y: 1, parent: 'body'},
+        armL: {x: 9, y: 1, parent: 'body'},
+        armR: {x: 9, y: 1, parent: 'body'},
+        shldR: {x: 9, y: -13, parent: 'body'},
+        shldL: {x: 9, y: -13, parent: 'body'},
+        legR: {x: 2, y: 21, parent: 'body'},
+        legL: {x: 2, y: 21, parent: 'body'},
+        back: {x: 22, y: -20, parent: 'body'}
       };
       this.collisionR = 27;
 
@@ -46,8 +51,12 @@
       return vtxList;
     }
 
+    updatePartsState(unitData) {
+      unitData.setJointTransform('body', new Transform(0, 0, 0, 1));
+    }
+
     getImageList(unitData) {
-      const bodyTransform = unitData.getBodyPartsTransform();
+      const bodyTransform = unitData.getJointTransform('body');
       const imageList = [
         {
           id: 0,

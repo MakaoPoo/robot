@@ -50,9 +50,11 @@ const PARTS_CLASS_LIST = partsListTemplate({}, {}, {}, {}, {}, {});
 
 const DRAW_HITBOX = true;
 
-const FRAME_SPLIT = 10;
+const FRAME_SPLIT = 20;
 
 const FLOOR_BORDER_ANGLE = 50;
+
+const FALL_MAX_SPEED = 25;
 
 const getDot = function(vec1, vec2) {
   return vec1.x * vec2.x + vec1.y * vec2.y;

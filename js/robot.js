@@ -7,6 +7,7 @@ class Unit {
   parts
   partsIdList
   transform
+  joint
   state
   input
   imageList
@@ -24,23 +25,27 @@ class Unit {
       this.parts[partsType] = new PARTS_CLASS_LIST[partsType][partsId]();
     }
 
-    this.transform = {
-      unit: new Transform(128, 128, 0, 1),
-      body: new Transform(0, 0, 0, 1),
-      armR: new Transform(-5, 0, 45),
-      armL: new Transform(0, 0, 45),
-      shldR: new Transform(-5, 0, -10),
-      shldL: new Transform(0, 0, -10),
-      legR: new Transform(-5, 0, 0),
-      legL: new Transform(0, 0, 0),
-      back: new Transform(0, 0, 0),
-      weapon: new Transform(0, 0, 0, 0.7)
+    this.transform = new Transform(128, 128, 0, 1)
+
+    this.jointList = {};
+
+    for(const partsType in this.parts) {
+      const parts = this.parts[partsType];
+      for(const jointName in parts.joint) {
+        const joint = parts.joint[jointName];
+        this.jointList[jointName] = {
+          pos: {x: joint.x, y: joint.y},
+          parent: joint.parent,
+          transform: new Transform(0, 0, 0, 1),
+        }
+      }
     }
 
     this.state = {
       pos: {x: 0, y: 0},
       speed: {x: 0, y: 0},
-      maxSpeed: {x: 10, y: 10},
+      frameSplitSpeed: {x: 0, y: 0},
+      maxSpeed: {x: 15, y: 15},
       dirLeft: true,
       ground: {
         flag: false,
@@ -71,19 +76,22 @@ class Unit {
   }
 
   dirTurn() {
-    if(this.transform.unit.x > this.input.mouse.x) {
+    if(this.transform.x > this.input.mouse.x) {
       this.state.dirLeft = true;
     }
-    if(this.transform.unit.x < this.input.mouse.x) {
+    if(this.transform.x < this.input.mouse.x) {
       this.state.dirLeft = false;
     }
   }
 
   updateUnitState() {
     if(this.input.keyList['a'] && !this.input.keyList['d']) {
-      this.state.speed.x -= 5;
+      this.state.speed.x -= 2;
+      this.state.speed.y -= 0.5;
+
     } else if(this.input.keyList['d'] && !this.input.keyList['a']) {
-      this.state.speed.x += 5;
+      this.state.speed.x += 2;
+      this.state.speed.y -= 0.5;
     }
 
     if(this.state.speed.x >= this.state.maxSpeed.x) {
@@ -94,13 +102,24 @@ class Unit {
     }
 
     if(this.input.keyList['w'] && !this.input.keyList['s']) {
-      this.state.speed.y -= 5;
+      this.state.speed.y -= 2;
+
+      const deceleration = 0.5;
+      if(Math.abs(unitData[0].state.speed.x) <= deceleration) {
+        unitData[0].state.speed.x = 0;
+      } else {
+        if(unitData[0].state.speed.x > 0) {
+          unitData[0].state.speed.x -= deceleration;
+        } else {
+          unitData[0].state.speed.x += deceleration;
+        }
+      }
     } else if(this.input.keyList['s'] && !this.input.keyList['w']) {
-      this.state.speed.y += 5;
+      this.state.speed.y += 2;
     }
 
-    if(this.state.speed.y >= this.state.maxSpeed.y) {
-      this.state.speed.y = this.state.maxSpeed.y;
+    if(this.state.speed.y >= FALL_MAX_SPEED) {
+      this.state.speed.y = FALL_MAX_SPEED;
     }
     if(this.state.speed.y <= -this.state.maxSpeed.y) {
       this.state.speed.y = -this.state.maxSpeed.y;
@@ -144,183 +163,30 @@ class Unit {
     this.imageList.push(imageData);
   }
 
-  getPartsTransform(partsName) {
-    switch(partsName) {
-      case 'body':
-      return this.getBodyPartsTransform();
+  getJointTransform(jointName) {
+    const joint = this.jointList[jointName];
 
-      case 'armR':
-      return this.getArmRPartsTransform();
-
-      case 'armL':
-      return ;
-
-      case 'legR':
-      return this.getLegRPartsTransform();
-
-      case 'legL':
-      return this.getLegLPartsTransform();
+    let parentJoint = new Transform(0, 0, 0, 1);
+    if(joint.parent) {
+      parentJoint = this.getJointTransform(joint.parent);
     }
-  }
 
-  getBodyPartsTransform() {
-    const bodyParent = this.getParentTransform('body');
-    const bodyTransform = this.transform.body;
+    const scale = parentJoint.scale * joint.transform.scale;
+    const rotate = parentJoint.rotate + joint.transform.rotate;
 
-    const rotate = bodyParent.rotate + bodyTransform.rotate;
-    const scale = bodyParent.scale * bodyTransform.scale;
-    const rotateBody = rotateVec(bodyTransform.x, bodyTransform.y, rotate)
+    const rotatePos = rotateVec(joint.pos.x + joint.transform.x, joint.pos.y + joint.transform.y, parentJoint.rotate);
 
     return {
-      x: bodyParent.x + rotateBody.x * scale,
-      y: bodyParent.y + rotateBody.y * scale,
+      x: parentJoint.x + rotatePos.x * parentJoint.scale,
+      y: parentJoint.y + rotatePos.y * parentJoint.scale,
       rotate: rotate,
-      scale: scale
+      scale: joint.transform.scale
     }
+
   }
 
-  getArmRPartsTransform() {
-    const bodyParent = this.getParentTransform('body');
-    const armParent = this.getParentTransform('arm');
-    const armRTransform = this.transform.armR;
-
-    const rotate = armParent.rotate + armRTransform.rotate;
-    const scale = bodyParent.scale * armRTransform.scale;
-    const rotateArmR = rotateVec(armRTransform.x, armRTransform.y, rotate)
-
-    return {
-      x: armParent.x + rotateArmR.x * scale,
-      y: armParent.y + rotateArmR.y * scale,
-      rotate: rotate,
-      scale: scale
-    }
-  }
-
-  getLegRPartsTransform() {
-    const bodyParent = this.getParentTransform('body');
-    const legParent = this.getParentTransform('leg');
-    const legRTransform = this.transform.legR;
-
-    const rotate = legParent.rotate + legRTransform.rotate;
-    const scale = bodyParent.scale * legRTransform.scale;
-    const rotateLegR = rotateVec(legRTransform.x, legRTransform.y, rotate)
-
-    return {
-      x: legParent.x + rotateLegR.x * scale,
-      y: legParent.y + rotateLegR.y * scale,
-      rotate: rotate,
-      scale: scale
-    }
-  }
-
-  getLegLPartsTransform() {
-    const bodyParent = this.getParentTransform('body');
-    const legParent = this.getParentTransform('leg');
-    const legLTransform = this.transform.legL;
-
-    const rotate = legParent.rotate + legLTransform.rotate;
-    const scale = bodyParent.scale * legLTransform.scale;
-    const rotateLegL = rotateVec(legLTransform.x, legLTransform.y, rotate)
-
-    return {
-      x: legParent.x + rotateLegL.x * scale,
-      y: legParent.y + rotateLegL.y * scale,
-      rotate: rotate,
-      scale: scale
-    }
-  }
-
-  getParentTransform(partsName) {
-    switch(partsName) {
-      case 'body':
-      return this.transform.unit;
-
-      case 'arm':
-      case 'armR':
-      case 'armL':
-      return this.getArmParentTransform();
-
-      case 'shld':
-      case 'shldR':
-      case 'shldL':
-      return this.getShldParentTransform();
-
-      case 'leg':
-      case 'legR':
-      case 'legL':
-      return this.getLegParentTransform();
-
-      case 'back':
-      return this.getBackParentTransform();
-    }
-  }
-
-  getArmParentTransform() {
-    const armJoint = this.parts.body.joint.arm;
-    const bodyTransform = this.getPartsTransform('body');
-
-    const rotateArmParent = rotateVec(armJoint.x, armJoint.y, bodyTransform.rotate);
-
-    const armParentPosX = bodyTransform.x + rotateArmParent.x * bodyTransform.scale;
-    const armParentPosY = bodyTransform.y + rotateArmParent.y * bodyTransform.scale;
-
-    return {
-      x: armParentPosX,
-      y: armParentPosY,
-      rotate: bodyTransform.rotate,
-      scale: bodyTransform.scale
-    };
-  }
-
-  getShldParentTransform() {
-    const shldJoint = this.parts.body.joint.shld;
-    const bodyTransform = this.getPartsTransform('body');
-
-    const rotateShldParent = rotateVec(shldJoint.x, shldJoint.y, bodyTransform.rotate);
-
-    const shldParentPosX = bodyTransform.x + rotateShldParent.x * bodyTransform.scale;
-    const shldParentPosY = bodyTransform.y + rotateShldParent.y * bodyTransform.scale;
-
-    return {
-      x: shldParentPosX,
-      y: shldParentPosY,
-      rotate: bodyTransform.rotate,
-      scale: bodyTransform.scale
-    };
-  }
-
-  getLegParentTransform() {
-    const legJoint = this.parts.body.joint.leg;
-    const bodyTransform = this.getPartsTransform('body');
-
-    const rotateLegParent = rotateVec(legJoint.x, legJoint.y, bodyTransform.rotate);
-
-    const legParentPosX = bodyTransform.x + rotateLegParent.x * bodyTransform.scale;
-    const legParentPosY = bodyTransform.y + rotateLegParent.y * bodyTransform.scale;
-
-    return {
-      x: legParentPosX,
-      y: legParentPosY,
-      rotate: bodyTransform.rotate,
-      scale: bodyTransform.scale
-    };
-  }
-
-  getBackParentTransform() {
-    const backJoint = this.parts.body.joint.back;
-    const bodyTransform = this.getPartsTransform('body');
-
-    const rotateBackParent = rotateVec(backJoint.x, backJoint.y, bodyTransform.rotate);
-
-    const backParentPosX = bodyTransform.x + rotateBackParent.x * bodyTransform.scale;
-    const backParentPosY = bodyTransform.y + rotateBackParent.y * bodyTransform.scale;
-
-    return {
-      x: backParentPosX,
-      y: backParentPosY,
-      rotate: bodyTransform.rotate,
-      scale: bodyTransform.scale
-    };
+  setJointTransform(jointName, transform) {
+    this.jointList[jointName].transform = transform;
   }
 }
 
@@ -379,23 +245,33 @@ const mainLoop = function(){
   draw();
 
   requestAnimationFrame(mainLoop);
+  // setTimeout(mainLoop, 100);
 }
 
 const advanceFrame = function() {
   unitData[0].state.ground.flag = false;
   unitData[0].state.ground.angle = FLOOR_BORDER_ANGLE;
+  unitData[0].state.frameSplitSpeed = {
+    x: unitData[0].state.speed.x / FRAME_SPLIT,
+    y: unitData[0].state.speed.y / FRAME_SPLIT
+  }
 
   for(let frame = 0; frame < FRAME_SPLIT; frame ++) {
     advanceOneFrame();
   }
 
-  if(Math.abs(unitData[0].state.speed.x) <= 1) {
+  let deceleration = 0.1;
+  if(unitData[0].state.ground.flag) {
+    deceleration = 1;
+  }
+
+  if(Math.abs(unitData[0].state.speed.x) <= deceleration) {
     unitData[0].state.speed.x = 0;
   } else {
     if(unitData[0].state.speed.x > 0) {
-      unitData[0].state.speed.x -= 1;
+      unitData[0].state.speed.x -= deceleration;
     } else {
-      unitData[0].state.speed.x += 1;
+      unitData[0].state.speed.x += deceleration;
     }
   }
 
@@ -403,28 +279,42 @@ const advanceFrame = function() {
 }
 
 const advanceOneFrame = function() {
-  unitData[0].transform.unit.x += unitData[0].state.speed.x / FRAME_SPLIT;
-  unitData[0].transform.unit.y += unitData[0].state.speed.y / FRAME_SPLIT;
+  unitData[0].transform.x += unitData[0].state.frameSplitSpeed.x;
+  unitData[0].transform.y += unitData[0].state.frameSplitSpeed.y;
 
-  const unitTransform = unitData[0].transform.unit;
-  const legJoint = unitData[0].parts.body.joint.leg;
+  const unitTransform = unitData[0].transform;
+  const legJoint = unitData[0].parts.body.joint.legR;
 
+  const collisionHitCircle = {
+    x: unitTransform.x,
+    y: unitTransform.y,
+    r: unitData[0].parts.body.collisionR
+  }
   const groundHitCircle = {
     x: unitTransform.x + legJoint.x,
     y: unitTransform.y + legJoint.y,
     r: unitData[0].parts.leg.groundR
   }
 
-  let shortestD = groundHitCircle.r;
-  let nearestNvec;
-  let isGround = false;
+  const collision = {
+    shortestD: collisionHitCircle.r,
+    nearestNvec: null,
+    angle: null,
+    flag: false
+  }
+  const ground = {
+    shortestD: groundHitCircle.r,
+    nearestNvec: null,
+    angle: null,
+    flag: false
+  }
 
   for(const obj of stageData.staticObjList) {
     if(obj.type == 'line') {
       const lineAngle = getDeg(Math.atan2(obj.vec.y, obj.vec.x));
-      const cVec1 = {x: groundHitCircle.x - obj.pos1.x, y: groundHitCircle.y - obj.pos1.y};
-      const cVec2 = {x: groundHitCircle.x - obj.pos2.x, y: groundHitCircle.y - obj.pos2.y};
       if(Math.abs(lineAngle) <= FLOOR_BORDER_ANGLE) {
+        const cVec1 = {x: groundHitCircle.x - obj.pos1.x, y: groundHitCircle.y - obj.pos1.y};
+        const cVec2 = {x: groundHitCircle.x - obj.pos2.x, y: groundHitCircle.y - obj.pos2.y};
         let d;
 
         if(getDot(obj.vec, cVec1) * getDot(obj.vec, cVec2) <= 0) {
@@ -436,28 +326,72 @@ const advanceOneFrame = function() {
         }
         if(d < groundHitCircle.r) {
           unitData[0].state.ground.flag = true;
-          isGround = true;
-          if(d < shortestD) {
-            shortestD = d;
-            nearestNvec = obj.nVec;
-            unitData[0].state.ground.angle = lineAngle;
+          ground.flag = true;
+          if(d < ground.shortestD) {
+            ground.shortestD = d;
+            ground.nearestNvec = obj.nVec;
+            ground.angle = lineAngle;
           }
         }
 
       } else {
+        const cVec1 = {x: collisionHitCircle.x - obj.pos1.x, y: collisionHitCircle.y - obj.pos1.y};
+        const cVec2 = {x: collisionHitCircle.x - obj.pos2.x, y: collisionHitCircle.y - obj.pos2.y};
+        let d;
+
+        if(getDot(obj.vec, cVec1) * getDot(obj.vec, cVec2) <= 0) {
+          d = Math.abs(getCrossZ(obj.vec, cVec1)) / obj.length;
+        } else {
+          const r1 = getDot(cVec1, cVec1);
+          const r2 = getDot(cVec2, cVec2);
+          d = Math.sqrt(r1 < r2? r1: r2);
+        }
+        if(d < collisionHitCircle.r) {
+          collision.flag = true;
+          if(d < collision.shortestD) {
+            collision.shortestD = d;
+            collision.nearestNvec = obj.nVec;
+            collision.angle = lineAngle;
+          }
+        }
 
       }
 
     }
   }
 
-  if(isGround) {
-    const pushY = nearestNvec.y * (groundHitCircle.r - shortestD);
-    unitData[0].transform.unit.y += pushY / Math.cos(getRad(unitData[0].state.ground.angle));
+  if(collision.flag) {
+    let pushX = collision.nearestNvec.x * (collisionHitCircle.r - collision.shortestD);
+    let pushY = collision.nearestNvec.y * (collisionHitCircle.r - collision.shortestD);
+
+    if(collision.angle > 90 + FLOOR_BORDER_ANGLE) {
+      pushX = 0;
+      pushY /= -Math.cos(getRad(collision.angle));
+    }
+
+    unitData[0].transform.x += pushX;
+    unitData[0].transform.y += pushY;
+
+    if(unitData[0].state.speed.x * pushX < -1) {
+      unitData[0].state.speed.x += pushX;
+    }
+    if(unitData[0].state.speed.y * pushY < -1) {
+      unitData[0].state.speed.y += pushY;
+    }
+  }
+  if(ground.flag) {
+    unitData[0].state.ground.angle = ground.angle;
+    const pushY = ground.nearestNvec.y * (groundHitCircle.r - ground.shortestD);
+    unitData[0].transform.y += pushY / Math.cos(getRad(unitData[0].state.ground.angle));
+
+    if(unitData[0].state.speed.y > 1) {
+      unitData[0].state.speed.y += pushY;
+    }
   }
 }
 
 const draw = function() {
+  console.log(unitData[0].state.speed.x + ", " + unitData[0].state.speed.y);
 
   const $canvas = $('#mainCanvas');
   $canvas[0].width = $canvas[0].width;
@@ -476,6 +410,7 @@ const draw = function() {
     return 0;
   });
 
+  const unitTransform = unitData[0].transform;
   for(const image of unitData[0].imageList) {
     const imageSrc = image.imageSrc;
     const transform = image.transform;
@@ -488,10 +423,13 @@ const draw = function() {
     const imageH = image.imagePos.h;
 
     ctx.save();
-    ctx.translate(transform.x, transform.y);
+    ctx.translate(unitTransform.x, unitTransform.y);
+    ctx.rotate(getRad(unitTransform.rotate));
+    ctx.scale(unitTransform.scale, unitTransform.scale);
     if(!unitData[0].state.dirLeft) {
       ctx.scale(-1, 1);
     }
+    ctx.translate(transform.x, transform.y);
     ctx.rotate(getRad(transform.rotate));
     ctx.scale(transform.scale, transform.scale);
 
@@ -502,51 +440,25 @@ const draw = function() {
 
     ctx.restore();
 
-    ctx.strokeStyle = "#f00";
-    ctx.beginPath();
-    ctx.arc(unitData[0].input.mouse.x, unitData[0].input.mouse.y, 25, 0, Math.PI * 2, false);
-    ctx.stroke();
-
-    if(DRAW_HITBOX) {
-      const unitTransform = unitData[0].transform.unit;
-      const legJoint = unitData[0].parts.body.joint.leg;
-      const collisionR = unitData[0].parts.body.collisionR;
-      const groundR = unitData[0].parts.leg.groundR;
-      ctx.strokeStyle = "#0f0";
-      ctx.beginPath();
-      ctx.arc(unitTransform.x, unitTransform.y, collisionR, 0, Math.PI * 2, false);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(unitTransform.x + legJoint.x, unitTransform.y + legJoint.y, groundR, 0, Math.PI * 2, false);
-      ctx.stroke();
-    }
-
   }
 
-  // if(unitData[0].state.dirLeft) {
-  //   drawShldR(ctx, unitData, 0, new Transform());
-  //   drawArmR(ctx, unitData, 1, new Transform());
-  //   drawLegR(ctx, unitData, 0, new Transform());
-  //   drawBody(ctx, unitData, 0, new Transform());
-  //   drawBack(ctx, unitData, 0, new Transform());
-  //   drawLegL(ctx, unitData, 0, new Transform());
-  //   drawWeapon(ctx, unitData, 0, new Transform(0, 0, 0));
-  //   drawArmL(ctx, unitData, 0, new Transform());
-  //   drawShldL(ctx, unitData, 0, new Transform());
-  //   drawWeapon(ctx, unitData, 1, new Transform(0, 0, 0));
-  // } else {
-  //   drawLegL(ctx, unitData, 0, new Transform());
-  //   drawBack(ctx, unitData, 0, new Transform());
-  //   drawBody(ctx, unitData, 0, new Transform());
-  //   drawLegR(ctx, unitData, 0, new Transform());
-  //   drawArmR(ctx, unitData, 0, new Transform());
-  //   drawShldR(ctx, unitData, 0, new Transform());
-  //   drawWeapon(ctx, unitData, 0, new Transform(0, 0, 0));
-  //   drawArmL(ctx, unitData, 0, new Transform());
-  //   drawShldL(ctx, unitData, 0, new Transform());
-  //   drawWeapon(ctx, unitData, 1, new Transform(0, 0, 0));
-  // }
-  //
+  ctx.strokeStyle = "#f00";
+  ctx.beginPath();
+  ctx.arc(unitData[0].input.mouse.x, unitData[0].input.mouse.y, 25, 0, Math.PI * 2, false);
+  ctx.stroke();
+
+  if(DRAW_HITBOX) {
+    const legJoint = unitData[0].parts.body.joint.legR;
+    const collisionR = unitData[0].parts.body.collisionR;
+    const groundR = unitData[0].parts.leg.groundR;
+    ctx.strokeStyle = "#0f0";
+    ctx.beginPath();
+    ctx.arc(unitTransform.x, unitTransform.y, collisionR, 0, Math.PI * 2, false);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(unitTransform.x + legJoint.x, unitTransform.y + legJoint.y, groundR, 0, Math.PI * 2, false);
+    ctx.stroke();
+  }
 }
 
 const drawStage = function(ctx) {

@@ -15,7 +15,8 @@
       this.imageSrc = new Image();
       this.vtxList = this.getVtxList();
       this.joint = {
-        hand: {x: 0, y: 37}
+        handR: {x: 0, y: 37, parent: 'armR'},
+        handL: {x: 0, y: 37, parent: 'armL'},
       };
 
       this.loadImage();
