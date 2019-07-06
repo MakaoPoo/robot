@@ -285,84 +285,40 @@ const advanceOneFrame = function() {
   const unitTransform = unitData[0].transform;
   const legJoint = unitData[0].parts.body.joint.legR;
 
-  const collisionHitCircle = {
-    x: unitTransform.x,
-    y: unitTransform.y,
-    r: unitData[0].parts.body.collisionR
-  }
-  const groundHitCircle = {
-    x: unitTransform.x + legJoint.x,
-    y: unitTransform.y + legJoint.y,
-    r: unitData[0].parts.leg.groundR
-  }
+  const collisionR = unitData[0].parts.body.collisionR;
+  const groundR = unitData[0].parts.leg.groundR;
 
   const collision = {
-    shortestD: collisionHitCircle.r,
+    shortestD: collisionR,
     nearestNvec: null,
+    horizonDist: null,
     angle: null,
-    flag: false
-  }
-  const ground = {
-    shortestD: groundHitCircle.r,
-    nearestNvec: null,
-    angle: null,
-    flag: false
-  }
-
-  for(const obj of stageData.staticObjList) {
-    if(obj.type == 'line') {
-      const lineAngle = getDeg(Math.atan2(obj.vec.y, obj.vec.x));
-      if(Math.abs(lineAngle) <= FLOOR_BORDER_ANGLE) {
-        const cVec1 = {x: groundHitCircle.x - obj.pos1.x, y: groundHitCircle.y - obj.pos1.y};
-        const cVec2 = {x: groundHitCircle.x - obj.pos2.x, y: groundHitCircle.y - obj.pos2.y};
-        let d;
-
-        if(getDot(obj.vec, cVec1) * getDot(obj.vec, cVec2) <= 0) {
-          d = Math.abs(getCrossZ(obj.vec, cVec1)) / obj.length;
-        } else {
-          const r1 = getDot(cVec1, cVec1);
-          const r2 = getDot(cVec2, cVec2);
-          d = Math.sqrt(r1 < r2? r1: r2);
-        }
-        if(d < groundHitCircle.r) {
-          unitData[0].state.ground.flag = true;
-          ground.flag = true;
-          if(d < ground.shortestD) {
-            ground.shortestD = d;
-            ground.nearestNvec = obj.nVec;
-            ground.angle = lineAngle;
-          }
-        }
-
-      } else {
-        const cVec1 = {x: collisionHitCircle.x - obj.pos1.x, y: collisionHitCircle.y - obj.pos1.y};
-        const cVec2 = {x: collisionHitCircle.x - obj.pos2.x, y: collisionHitCircle.y - obj.pos2.y};
-        let d;
-
-        if(getDot(obj.vec, cVec1) * getDot(obj.vec, cVec2) <= 0) {
-          d = Math.abs(getCrossZ(obj.vec, cVec1)) / obj.length;
-        } else {
-          const r1 = getDot(cVec1, cVec1);
-          const r2 = getDot(cVec2, cVec2);
-          d = Math.sqrt(r1 < r2? r1: r2);
-        }
-        if(d < collisionHitCircle.r) {
-          collision.flag = true;
-          if(d < collision.shortestD) {
-            collision.shortestD = d;
-            collision.nearestNvec = obj.nVec;
-            collision.angle = lineAngle;
-          }
-        }
-
-      }
-
+    flag: false,
+    hitCircle: {
+      x: unitTransform.x,
+      y: unitTransform.y,
+      r: collisionR
     }
   }
 
+  const ground = {
+    shortestD: groundR,
+    nearestNvec: null,
+    horizonDist: null,
+    angle: null,
+    flag: false,
+    hitCircle: {
+      x: unitTransform.x + legJoint.x,
+      y: unitTransform.y + legJoint.y,
+      r: groundR
+    }
+  }
+
+  hitCheck(collision, ground);
+
   if(collision.flag) {
-    let pushX = collision.nearestNvec.x * (collisionHitCircle.r - collision.shortestD);
-    let pushY = collision.nearestNvec.y * (collisionHitCircle.r - collision.shortestD);
+    let pushX = collision.nearestNvec.x * (collision.hitCircle.r - collision.shortestD);
+    let pushY = collision.nearestNvec.y * (collision.hitCircle.r - collision.shortestD);
 
     if(collision.angle > 90 + FLOOR_BORDER_ANGLE) {
       pushX = 0;
@@ -381,13 +337,71 @@ const advanceOneFrame = function() {
   }
   if(ground.flag) {
     unitData[0].state.ground.angle = ground.angle;
-    const pushY = ground.nearestNvec.y * (groundHitCircle.r - ground.shortestD);
+    const pushY = ground.nearestNvec.y * (ground.hitCircle.r - ground.shortestD);
     unitData[0].transform.y += pushY / Math.cos(getRad(unitData[0].state.ground.angle));
 
     if(unitData[0].state.speed.y > 1) {
       unitData[0].state.speed.y += pushY;
     }
   }
+}
+
+const hitCheck = function(collision, ground) {
+  for(const obj of stageData.staticObjList) {
+    if(obj.type == 'line') {
+      hitCheckLineObj(obj, collision, ground);
+    }
+  }
+}
+
+const hitCheckLineObj = function(obj, collision, ground) {
+  const lineAngle = getDeg(Math.atan2(obj.vec.y, obj.vec.x));
+
+  if(Math.abs(lineAngle) <= FLOOR_BORDER_ANGLE) {
+    //---------------------------------------------------------
+    const cVec1 = {x: ground.hitCircle.x - obj.pos1.x, y: ground.hitCircle.y - obj.pos1.y};
+    const cVec2 = {x: ground.hitCircle.x - obj.pos2.x, y: ground.hitCircle.y - obj.pos2.y};
+    let d;
+
+    if(getDot(obj.vec, cVec1) * getDot(obj.vec, cVec2) <= 0) {
+      d = Math.abs(getCrossZ(obj.vec, cVec1)) / obj.length;
+    } else {
+      const r1 = getDot(cVec1, cVec1);
+      const r2 = getDot(cVec2, cVec2);
+      d = Math.sqrt(r1 < r2? r1: r2);
+    }
+    if(d < ground.hitCircle.r) {
+      unitData[0].state.ground.flag = true;
+      ground.flag = true;
+      if(d < ground.shortestD) {
+        ground.shortestD = d;
+        ground.nearestNvec = obj.nVec;
+        ground.angle = lineAngle;
+      }
+    }
+  } else {
+    //---------------------------------------------------------
+    const cVec1 = {x: collision.hitCircle.x - obj.pos1.x, y: collision.hitCircle.y - obj.pos1.y};
+    const cVec2 = {x: collision.hitCircle.x - obj.pos2.x, y: collision.hitCircle.y - obj.pos2.y};
+    let d;
+
+    if(getDot(obj.vec, cVec1) * getDot(obj.vec, cVec2) <= 0) {
+      d = Math.abs(getCrossZ(obj.vec, cVec1)) / obj.length;
+    } else {
+      const r1 = getDot(cVec1, cVec1);
+      const r2 = getDot(cVec2, cVec2);
+      d = Math.sqrt(r1 < r2? r1: r2);
+    }
+    if(d < collision.hitCircle.r) {
+      collision.flag = true;
+      if(d < collision.shortestD) {
+        collision.shortestD = d;
+        collision.nearestNvec = obj.nVec;
+        collision.angle = lineAngle;
+      }
+    }
+  }
+
 }
 
 const draw = function() {
@@ -401,10 +415,10 @@ const draw = function() {
 
   unitData[0].imageList.sort(function(a, b) {
     if(a.zIndex < b.zIndex) {
-      return 1;
+      return (unitData[0].state.dirLeft? 1: -1);
     }
     if(a.zIndex > b.zIndex) {
-      return -1;
+      return (unitData[0].state.dirLeft? -1: 1);
     }
 
     return 0;

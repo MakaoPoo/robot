@@ -8,6 +8,7 @@
     name
     imageSrc
     vtxList
+    joint
     groundR
 
     constructor() {

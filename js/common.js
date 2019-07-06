@@ -48,7 +48,7 @@ const ALL_PARTS_NUMS = partsListTemplate(1, 1, 1, 1, 1, 1);
 
 const PARTS_CLASS_LIST = partsListTemplate({}, {}, {}, {}, {}, {});
 
-const DRAW_HITBOX = true;
+const DRAW_HITBOX = false;
 
 const FRAME_SPLIT = 20;
 

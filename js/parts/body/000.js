@@ -18,11 +18,10 @@
       this.vtxList = this.getVtxList();
       this.joint = {
         body: {x: 0, y: 0, parent: null},
-        armR: {x: 9, y: 1, parent: 'body'},
-        armL: {x: 9, y: 1, parent: 'body'},
-        armR: {x: 9, y: 1, parent: 'body'},
-        shldR: {x: 9, y: -13, parent: 'body'},
-        shldL: {x: 9, y: -13, parent: 'body'},
+        armR: {x: 4, y: 1, parent: 'body'},
+        armL: {x: 4, y: 1, parent: 'body'},
+        shldR: {x: 6, y: -13, parent: 'body'},
+        shldL: {x: 6, y: -13, parent: 'body'},
         legR: {x: 2, y: 21, parent: 'body'},
         legL: {x: 2, y: 21, parent: 'body'},
         back: {x: 22, y: -20, parent: 'body'}
@@ -52,7 +51,9 @@
     }
 
     updatePartsState(unitData) {
-      unitData.setJointTransform('body', new Transform(0, 0, 0, 1));
+      const body = new Transform(0, 0, 0, 1);
+      
+      unitData.setJointTransform('body', body);
     }
 
     getImageList(unitData) {

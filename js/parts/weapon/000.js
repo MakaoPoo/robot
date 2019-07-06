@@ -8,6 +8,7 @@
     name
     imageSrc
     vtxList
+    joint
 
     constructor() {
       this.id = PartsId;
@@ -38,6 +39,33 @@
       ];
 
       return vtxList;
+    }
+
+    updatePartsState(unitData) {
+      const handR = new Transform(0, 0, 0, 0.8);
+
+      unitData.setJointTransform('handR', handR);
+    }
+
+    getImageList(unitData) {
+      const handRTransform = unitData.getJointTransform('handR');
+
+      const imageList = [
+        {
+          id: 0,
+          transform: addTransform(handRTransform, new Transform(0, 0, 0, 1)),
+          mirror: false,
+          zIndex: 1.5
+        },
+        {
+          id: 1,
+          transform: addTransform(handRTransform, new Transform(0, 0, 0, 1)),
+          mirror: false,
+          zIndex: 1.5
+        }
+      ];
+
+      return imageList;
     }
   }
 
