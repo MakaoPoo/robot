@@ -44,7 +44,7 @@ class Transform {
 
 const PARTS_ID_LENGTH = 3;
 
-const ALL_PARTS_NUMS = partsListTemplate(1, 1, 1, 1, 1, 1);
+const ALL_PARTS_NUMS = partsListTemplate(1, 2, 2, 2, 2, 1);
 
 const PARTS_CLASS_LIST = partsListTemplate({}, {}, {}, {}, {}, {});
 

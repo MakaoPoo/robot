@@ -15,7 +15,14 @@ class Unit {
 
   constructor() {
     this.parts = partsListTemplate();
-    this.partsIdList = partsListTemplate("000", "000", "000", "000", "000", "000");
+    this.partsIdList = partsListTemplate(
+      "000", //ボディ
+      "001", //アーム
+      "001", //ショルダー
+      "001", //レッグ
+      "001", //バック
+      "000"  //ウェポン
+    );
 
     for(const partsType in this.partsIdList) {
       const partsId = this.partsIdList[partsType];
@@ -405,8 +412,6 @@ const hitCheckLineObj = function(obj, collision, ground) {
 }
 
 const draw = function() {
-  console.log(unitData[0].state.speed.x + ", " + unitData[0].state.speed.y);
-
   const $canvas = $('#mainCanvas');
   $canvas[0].width = $canvas[0].width;
   const ctx = $canvas[0].getContext('2d');

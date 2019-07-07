@@ -1,9 +1,9 @@
 (function() {
   const PartsType = "arm";
-  const PartsId = "000";
-  const PartsName = "ステイメン";
+  const PartsId = "001";
+  const PartsName = "デスティニー";
 
-  class Arm000 {
+  class Arm001 {
     id
     name
     imageSrc
@@ -35,12 +35,12 @@
         {
           imagePos: {x: 0, y: 0, w: 32, h: 72},
           hitbox: {x: 5, y: 17, w: 15, h: 48},
-          pivot: {x: 11, y: 21}
+          pivot: {x: 15, y: 21}
         },
         {
           imagePos: {x: 32, y: 0, w: 32, h: 72},
           hitbox: {x: 5, y: 17, w: 15, h: 48},
-          pivot: {x: 11, y: 21}
+          pivot: {x: 15, y: 21}
         }
       ];
 
@@ -60,7 +60,7 @@
       if(!unitData.state.dirLeft) {
         aimRotate *= -1;
       }
-      
+
       const rotateArm = rotateVec(10, 0, getDeg(Math.atan2(aimY, aimX)));
       armR.x = -Math.abs(rotateArm.x);
       armR.y = -10 + rotateArm.y;
@@ -102,5 +102,5 @@
     }
   }
 
-  PARTS_CLASS_LIST[PartsType][PartsId] = Arm000;
+  PARTS_CLASS_LIST[PartsType][PartsId] = Arm001;
 })();
