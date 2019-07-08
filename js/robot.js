@@ -9,6 +9,7 @@ class Unit {
   transform
   joint
   state
+  motion
   input
   imageList
   hitboxList
@@ -51,18 +52,33 @@ class Unit {
     this.state = {
       pos: {x: 0, y: 0},
       speed: {x: 0, y: 0},
+      accel: {x: 0, y: 0},
       frameSplitSpeed: {x: 0, y: 0},
       maxSpeed: {x: 15, y: 15},
       dirLeft: true,
       ground: {
         flag: false,
         angle: 0
-      }
+      },
+      dash: false
     }
+
+    this.motion = {
+      frame: 0,
+      pose: 'flow'
+    };
 
     this.input = {
       mouse: { x: 0, y: 0 },
-      keyList: {}
+      keyList: {},
+      keyDouble: {
+        id: null,
+        flag: false
+      },
+      keyDoubleFrame: {
+        id: null,
+        frame: 0,
+      },
     }
 
     this.imageList = [];
@@ -92,44 +108,97 @@ class Unit {
   }
 
   updateUnitState() {
+    const state = this.state;
+    state.accel = {x: 0, y: GRAVITY};
+
+    if(this.input.keyDoubleFrame.frame > 0) {
+      this.input.keyDoubleFrame.frame -= 1;
+    }
+
+    if(this.input.keyDouble.flag) {
+      if(this.input.keyDouble.id == 'a') {
+        state.accel.x = -100;
+        state.dash = true;
+      }
+      if(this.input.keyDouble.id == 'd') {
+        state.accel.x = 100;
+        state.dash = true;
+      }
+    }
+
+    this.input.keyDouble.id = null;
+
+
+    if(state.dash) {
+      state.maxSpeed = {x: 15, y: 15};
+    } else {
+      state.maxSpeed = {x: 8, y: 15};
+    }
+
     if(this.input.keyList['a'] && !this.input.keyList['d']) {
-      this.state.speed.x -= 2;
-      this.state.speed.y -= 0.5;
-
+      if(state.ground.flag) {
+        state.accel.x -= 2;
+      } else {
+        state.accel.x -= 1;
+        if(state.dash) {
+          state.accel.y -= 0.5;
+        }
+      }
     } else if(this.input.keyList['d'] && !this.input.keyList['a']) {
-      this.state.speed.x += 2;
-      this.state.speed.y -= 0.5;
+      if(state.ground.flag) {
+        state.accel.x += 2;
+      } else {
+        state.accel.x += 1;
+        if(state.dash) {
+          state.accel.y -= 0.5;
+        }
+      }
     }
 
-    if(this.state.speed.x >= this.state.maxSpeed.x) {
-      this.state.speed.x = this.state.maxSpeed.x;
-    }
-    if(this.state.speed.x <= -this.state.maxSpeed.x) {
-      this.state.speed.x = -this.state.maxSpeed.x;
+    if(Math.abs(state.accel.x) < 2 && Math.abs(state.speed.x) < 5) {
+      state.dash = false;
     }
 
     if(this.input.keyList['w'] && !this.input.keyList['s']) {
-      this.state.speed.y -= 2;
+      state.accel.y -= GRAVITY + 2;
+    } else if(this.input.keyList['s'] && !this.input.keyList['w']) {
+      // state.accel.y += 2 - GRAVITY;
+    }
 
-      const deceleration = 0.5;
-      if(Math.abs(unitData[0].state.speed.x) <= deceleration) {
+    if(unitData[0].state.speed.x * unitData[0].state.accel.x <= 0) {
+      const friction = (state.ground.flag)? GROUND_FRICTION: AIR_FRICTION;
+      if(Math.abs(unitData[0].state.speed.x) <= friction) {
         unitData[0].state.speed.x = 0;
       } else {
         if(unitData[0].state.speed.x > 0) {
-          unitData[0].state.speed.x -= deceleration;
+          unitData[0].state.speed.x -= friction;
         } else {
-          unitData[0].state.speed.x += deceleration;
+          unitData[0].state.speed.x += friction;
         }
       }
-    } else if(this.input.keyList['s'] && !this.input.keyList['w']) {
-      this.state.speed.y += 2;
     }
 
-    if(this.state.speed.y >= FALL_MAX_SPEED) {
-      this.state.speed.y = FALL_MAX_SPEED;
+    if(Math.abs(state.speed.x) < MIN_SPEED
+    && Math.abs(state.speed.x + state.accel.x) < MIN_SPEED
+    && state.speed * state.accel.x < 0) {
+      state.speed.x = 0;
+    } else {
+      state.speed.x += state.accel.x;
     }
-    if(this.state.speed.y <= -this.state.maxSpeed.y) {
-      this.state.speed.y = -this.state.maxSpeed.y;
+    state.speed.y += state.accel.y;
+
+    if(state.speed.x >= state.maxSpeed.x) {
+      state.speed.x = state.maxSpeed.x;
+    }
+    if(state.speed.x <= -state.maxSpeed.x) {
+      state.speed.x = -state.maxSpeed.x;
+    }
+
+    if(state.speed.y >= FALL_MAX_SPEED) {
+      state.speed.y = FALL_MAX_SPEED;
+    }
+    if(state.speed.y <= -state.maxSpeed.y) {
+      state.speed.y = -state.maxSpeed.y;
     }
 
     for(const type in this.parts) {
@@ -223,10 +292,24 @@ $(function() {
 
 $(document).on('keydown', function(e) {
   if(!e) e = window.event;
-  if(unitData[playerId].input.keyList[e.key]) {
+
+  const input = unitData[playerId].input;
+
+  if(input.keyList[e.key]) {
     return;
   }
-  unitData[playerId].input.keyList[e.key] = true;
+
+  input.keyList[e.key] = true;
+
+  if(input.keyDoubleFrame.id == e.key && input.keyDoubleFrame.frame > 0){
+    input.keyDouble.id = e.key;
+    input.keyDouble.flag = true;
+    console.log(input.keyDoubleFrame.frame);
+    input.keyDoubleFrame.frame = 0;
+  } else {
+    input.keyDoubleFrame.id = e.key;
+    input.keyDoubleFrame.frame = KEY_DOUBLE_FRAME;
+  }
 });
 
 $(document).on('keyup', function(e) {
@@ -267,22 +350,6 @@ const advanceFrame = function() {
     advanceOneFrame();
   }
 
-  let deceleration = 0.1;
-  if(unitData[0].state.ground.flag) {
-    deceleration = 1;
-  }
-
-  if(Math.abs(unitData[0].state.speed.x) <= deceleration) {
-    unitData[0].state.speed.x = 0;
-  } else {
-    if(unitData[0].state.speed.x > 0) {
-      unitData[0].state.speed.x -= deceleration;
-    } else {
-      unitData[0].state.speed.x += deceleration;
-    }
-  }
-
-  unitData[0].state.speed.y += 1;
 }
 
 const advanceOneFrame = function() {

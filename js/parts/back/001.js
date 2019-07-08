@@ -87,12 +87,12 @@
           mirror: false,
           zIndex: -0.5
         },
-        {
-          id: 4,
-          transform: addTransform(handLTransform, new Transform(0, 0, -45, 0.8)),
-          mirror: false,
-          zIndex: -1.5
-        }
+        // {
+        //   id: 4,
+        //   transform: addTransform(handLTransform, new Transform(0, 0, -45, 0.8)),
+        //   mirror: false,
+        //   zIndex: -1.5
+        // }
       ];
 
       return imageList;
