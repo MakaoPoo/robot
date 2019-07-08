@@ -31,12 +31,12 @@
         {
           imagePos: {x: 0, y: 0, w: 80, h: 64},
           hitbox: {x: 4, y: 31, w: 22, h: 40},
-          pivot: {x: 4, y: 26}
+          pivot: {x: 3, y: 26}
         },
         {
           imagePos: {x: 80, y: 0, w: 48, h: 64},
           hitbox: {x: 4, y: 31, w: 22, h: 40},
-          pivot: {x: 4, y: 26}
+          pivot: {x: 3, y: 26}
         },
         {
           imagePos: {x: 0, y: 64, w: 256, h: 48},
@@ -89,7 +89,7 @@
         },
         {
           id: 4,
-          transform: addTransform(handLTransform, new Transform(0, 0, 0, 0.8)),
+          transform: addTransform(handLTransform, new Transform(0, 0, -45, 0.8)),
           mirror: false,
           zIndex: -1.5
         }

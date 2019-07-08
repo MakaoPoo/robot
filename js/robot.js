@@ -17,7 +17,7 @@ class Unit {
     this.parts = partsListTemplate();
     this.partsIdList = partsListTemplate(
       "000", //ボディ
-      "001", //アーム
+      "000", //アーム
       "001", //ショルダー
       "001", //レッグ
       "001", //バック
@@ -298,7 +298,7 @@ const advanceOneFrame = function() {
   const collision = {
     shortestD: collisionR,
     nearestNvec: null,
-    horizonDist: null,
+    horizonDist: collisionR,
     angle: null,
     flag: false,
     hitCircle: {
@@ -311,7 +311,7 @@ const advanceOneFrame = function() {
   const ground = {
     shortestD: groundR,
     nearestNvec: null,
-    horizonDist: null,
+    horizonDist: groundR,
     angle: null,
     flag: false,
     hitCircle: {
@@ -327,7 +327,7 @@ const advanceOneFrame = function() {
     let pushX = collision.nearestNvec.x * (collision.hitCircle.r - collision.shortestD);
     let pushY = collision.nearestNvec.y * (collision.hitCircle.r - collision.shortestD);
 
-    if(collision.angle > 90 + FLOOR_BORDER_ANGLE) {
+    if(collision.angle > 180 - ROOF_BORDER_ANGLE) {
       pushX = 0;
       pushY /= -Math.cos(getRad(collision.angle));
     }
@@ -343,6 +343,7 @@ const advanceOneFrame = function() {
     }
   }
   if(ground.flag) {
+    unitData[0].state.ground.flag = true;
     unitData[0].state.ground.angle = ground.angle;
     const pushY = ground.nearestNvec.y * (ground.hitCircle.r - ground.shortestD);
     unitData[0].transform.y += pushY / Math.cos(getRad(unitData[0].state.ground.angle));
@@ -356,59 +357,58 @@ const advanceOneFrame = function() {
 const hitCheck = function(collision, ground) {
   for(const obj of stageData.staticObjList) {
     if(obj.type == 'line') {
-      hitCheckLineObj(obj, collision, ground);
+      const lineAngle = getDeg(Math.atan2(obj.vec.y, obj.vec.x));
+      obj.angle = Math.abs(lineAngle);
+      if(obj.angle <= FLOOR_BORDER_ANGLE) {
+        hitCheckLineObj(obj, ground);
+      } else {
+        hitCheckLineObj(obj, collision);
+      }
     }
   }
 }
 
-const hitCheckLineObj = function(obj, collision, ground) {
-  const lineAngle = getDeg(Math.atan2(obj.vec.y, obj.vec.x));
+const hitCheckLineObj = function(obj, hitboxData) {
+  let d;
+  let dist = null;
 
-  if(Math.abs(lineAngle) <= FLOOR_BORDER_ANGLE) {
-    //---------------------------------------------------------
-    const cVec1 = {x: ground.hitCircle.x - obj.pos1.x, y: ground.hitCircle.y - obj.pos1.y};
-    const cVec2 = {x: ground.hitCircle.x - obj.pos2.x, y: ground.hitCircle.y - obj.pos2.y};
-    let d;
+  const cVec1 = {x: hitboxData.hitCircle.x - obj.pos1.x, y: hitboxData.hitCircle.y - obj.pos1.y};
+  const cVec2 = {x: hitboxData.hitCircle.x - obj.pos2.x, y: hitboxData.hitCircle.y - obj.pos2.y};
+  const dotObjCv1 = getDot(obj.vec, cVec1);
+  const dotObjCv2 = getDot(obj.vec, cVec2);
 
-    if(getDot(obj.vec, cVec1) * getDot(obj.vec, cVec2) <= 0) {
-      d = Math.abs(getCrossZ(obj.vec, cVec1)) / obj.length;
-    } else {
-      const r1 = getDot(cVec1, cVec1);
-      const r2 = getDot(cVec2, cVec2);
-      d = Math.sqrt(r1 < r2? r1: r2);
-    }
-    if(d < ground.hitCircle.r) {
-      unitData[0].state.ground.flag = true;
-      ground.flag = true;
-      if(d < ground.shortestD) {
-        ground.shortestD = d;
-        ground.nearestNvec = obj.nVec;
-        ground.angle = lineAngle;
-      }
-    }
+  if(dotObjCv1 * dotObjCv2 <= 0) {
+    d = Math.abs(getCrossZ(obj.vec, cVec1)) / obj.length;
   } else {
-    //---------------------------------------------------------
-    const cVec1 = {x: collision.hitCircle.x - obj.pos1.x, y: collision.hitCircle.y - obj.pos1.y};
-    const cVec2 = {x: collision.hitCircle.x - obj.pos2.x, y: collision.hitCircle.y - obj.pos2.y};
-    let d;
+    const r1 = getDot(cVec1, cVec1);
+    const r2 = getDot(cVec2, cVec2);
 
-    if(getDot(obj.vec, cVec1) * getDot(obj.vec, cVec2) <= 0) {
-      d = Math.abs(getCrossZ(obj.vec, cVec1)) / obj.length;
+    if(r1 < r2) {
+      d = Math.sqrt(r1);
+      dist = Math.abs(dotObjCv1 / obj.length);
     } else {
-      const r1 = getDot(cVec1, cVec1);
-      const r2 = getDot(cVec2, cVec2);
-      d = Math.sqrt(r1 < r2? r1: r2);
-    }
-    if(d < collision.hitCircle.r) {
-      collision.flag = true;
-      if(d < collision.shortestD) {
-        collision.shortestD = d;
-        collision.nearestNvec = obj.nVec;
-        collision.angle = lineAngle;
-      }
+      d = Math.sqrt(r2);
+      dist = Math.abs(dotObjCv2 / obj.length);
     }
   }
 
+  if(d < hitboxData.shortestD || Math.abs(d - hitboxData.shortestD) < 0.01) {
+    if(dist == null) {
+      hitboxData.flag = true;
+      hitboxData.shortestD = d;
+      hitboxData.horizonDist = null;
+      hitboxData.nearestNvec = obj.nVec;
+      hitboxData.angle = obj.angle;
+    }else {
+      if(hitboxData.horizonDist != null && dist < hitboxData.horizonDist) {
+        hitboxData.flag = true;
+        hitboxData.shortestD = d;
+        hitboxData.horizonDist = dist;
+        hitboxData.nearestNvec = obj.nVec;
+        hitboxData.angle = obj.angle;
+      }
+    }
+  }
 }
 
 const draw = function() {

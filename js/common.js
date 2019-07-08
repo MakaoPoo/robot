@@ -48,11 +48,12 @@ const ALL_PARTS_NUMS = partsListTemplate(1, 2, 2, 2, 2, 1);
 
 const PARTS_CLASS_LIST = partsListTemplate({}, {}, {}, {}, {}, {});
 
-const DRAW_HITBOX = false;
+const DRAW_HITBOX = true;
 
 const FRAME_SPLIT = 20;
 
 const FLOOR_BORDER_ANGLE = 50;
+const ROOF_BORDER_ANGLE = 20;
 
 const FALL_MAX_SPEED = 25;
 
