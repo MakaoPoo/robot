@@ -358,8 +358,8 @@ const hitCheck = function(collision, ground) {
   for(const obj of stageData.staticObjList) {
     if(obj.type == 'line') {
       const lineAngle = getDeg(Math.atan2(obj.vec.y, obj.vec.x));
-      obj.angle = Math.abs(lineAngle);
-      if(obj.angle <= FLOOR_BORDER_ANGLE) {
+      obj.angle = lineAngle;
+      if(Math.abs(obj.angle) <= FLOOR_BORDER_ANGLE) {
         hitCheckLineObj(obj, ground);
       } else {
         hitCheckLineObj(obj, collision);
