@@ -61,16 +61,16 @@
 
       const imageList = [
         {
-          id: 0,
+          id: [0, 0],
           transform: addTransform(shldRTransform, new Transform(0, 0, 0, 1)),
           mirror: false,
-          zIndex: 3
+          zIndex: [210, 210]
         },
         {
-          id: 0,
+          id: [0, 0],
           transform: addTransform(shldLTransform, new Transform(0, 0, 0, 1)),
           mirror: false,
-          zIndex: -3
+          zIndex: [-210, -210]
         }
       ];
 

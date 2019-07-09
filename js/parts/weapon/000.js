@@ -52,16 +52,16 @@
 
       const imageList = [
         {
-          id: 0,
+          id: [0, 0],
           transform: addTransform(handRTransform, new Transform(0, 0, 0, 1)),
           mirror: false,
-          zIndex: 1.5
+          zIndex: [190, 190]
         },
         {
-          id: 1,
+          id: [1, 1],
           transform: addTransform(handRTransform, new Transform(0, 0, 0, 1)),
           mirror: false,
-          zIndex: 1.5
+          zIndex: [180, 210]
         }
       ];
 

@@ -60,7 +60,7 @@
       if(!unitData.state.dirLeft) {
         aimRotate *= -1;
       }
-      
+
       const rotateArm = rotateVec(10, 0, getDeg(Math.atan2(aimY, aimX)));
       armR.x = -Math.abs(rotateArm.x);
       armR.y = -10 + rotateArm.y;
@@ -85,16 +85,16 @@
 
       const imageList = [
         {
-          id: 0,
+          id: [1, 0],
           transform: addTransform(armRTransform, new Transform(0, 0, 0, 1)),
           mirror: false,
-          zIndex: 2
+          zIndex: [200, 200]
         },
         {
-          id: 0,
+          id: [0, 1],
           transform: addTransform(armLTransform, new Transform(0, 0, 0, 1)),
           mirror: false,
-          zIndex: -2
+          zIndex: [-200, -200]
         }
       ];
 

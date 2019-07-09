@@ -52,7 +52,7 @@
 
     updatePartsState(unitData) {
       const body = new Transform(0, 0, 0, 1);
-      
+
       unitData.setJointTransform('body', body);
     }
 
@@ -60,9 +60,9 @@
       const bodyTransform = unitData.getJointTransform('body');
       const imageList = [
         {
-          id: 0,
+          id: [0, 0],
           transform: addTransform(bodyTransform, new Transform(0, 0, 0, 1)),
-          zIndex: 0
+          zIndex: [0, 0]
         }
       ];
 

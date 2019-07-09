@@ -70,29 +70,29 @@
 
       const imageList = [
         {
-          id: 0,
+          id: [0, 0],
           transform: addTransform(backTransform, new Transform(0, 0, 0, 1)),
           mirror: false,
-          zIndex: 0
+          zIndex: [0, 0]
         },
         {
-          id: 2,
+          id: [2, 2],
           transform: addTransform(backTransform, new Transform(8, -5, -130, 0.6)),
           mirror: false,
-          zIndex: 0.5
+          zIndex: [150, 150]
         },
         {
-          id: 2,
+          id: [2, 2],
           transform: addTransform(backTransform, new Transform(8, -5, -130, 0.6)),
           mirror: false,
-          zIndex: -0.5
+          zIndex: [-150, -150]
         },
-        // {
-        //   id: 4,
-        //   transform: addTransform(handLTransform, new Transform(0, 0, -45, 0.8)),
-        //   mirror: false,
-        //   zIndex: -1.5
-        // }
+        {
+          id: [4, 4],
+          transform: addTransform(handLTransform, new Transform(0, 0, -45, 0.8)),
+          mirror: false,
+          zIndex: [-190, -190]
+        }
       ];
 
       return imageList;

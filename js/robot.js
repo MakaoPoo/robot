@@ -18,7 +18,7 @@ class Unit {
     this.parts = partsListTemplate();
     this.partsIdList = partsListTemplate(
       "000", //ボディ
-      "000", //アーム
+      "001", //アーム
       "001", //ショルダー
       "001", //レッグ
       "001", //バック
@@ -60,12 +60,12 @@ class Unit {
         flag: false,
         angle: 0
       },
-      dash: false
+      walkType: 'flow'
     }
 
     this.motion = {
       frame: 0,
-      pose: 'flow'
+      name: 'flow'
     };
 
     this.input = {
@@ -83,6 +83,35 @@ class Unit {
 
     this.imageList = [];
     this.hitboxList = [];
+  }
+
+  setMotion(name, frame) {
+    this.motion.name = name;
+    if(frame != null) {
+      this.motion.frame = frame;
+    }
+  }
+
+  advanceMotion() {
+    this.motion.frame -= 1;
+  }
+
+  matchMotion(motionList) {
+    for(const motionName of motionList) {
+      if(this.motion.name == motionName) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  isLeft() {
+    return this.state.dirLeft;
+  }
+
+  isGround() {
+    return this.state.ground.flag;
   }
 
   setPartsId(type, id) {
@@ -108,8 +137,15 @@ class Unit {
   }
 
   updateUnitState() {
+    console.log(this.motion.name);
     const state = this.state;
     state.accel = {x: 0, y: GRAVITY};
+
+    if(this.isGround()) {
+      this.setMotion('stand', 0);
+    } else {
+      this.setMotion('flow', 0);
+    }
 
     if(this.input.keyDoubleFrame.frame > 0) {
       this.input.keyDoubleFrame.frame -= 1;
@@ -119,24 +155,24 @@ class Unit {
       if(this.input.keyDouble.id == 'a') {
         state.accel.x = -100;
         state.dash = true;
+        this.setMotion('stepL', 10);
       }
       if(this.input.keyDouble.id == 'd') {
         state.accel.x = 100;
         state.dash = true;
+        this.setMotion('stepR', 10);
       }
     }
-
     this.input.keyDouble.id = null;
 
-
-    if(state.dash) {
+    if(this.matchMotion(['flow', 'stand'])) {
       state.maxSpeed = {x: 15, y: 15};
     } else {
       state.maxSpeed = {x: 8, y: 15};
     }
 
     if(this.input.keyList['a'] && !this.input.keyList['d']) {
-      if(state.ground.flag) {
+      if(this.isGround()) {
         state.accel.x -= 2;
       } else {
         state.accel.x -= 1;
@@ -145,7 +181,7 @@ class Unit {
         }
       }
     } else if(this.input.keyList['d'] && !this.input.keyList['a']) {
-      if(state.ground.flag) {
+      if(this.isGround()) {
         state.accel.x += 2;
       } else {
         state.accel.x += 1;
@@ -166,7 +202,7 @@ class Unit {
     }
 
     if(unitData[0].state.speed.x * unitData[0].state.accel.x <= 0) {
-      const friction = (state.ground.flag)? GROUND_FRICTION: AIR_FRICTION;
+      const friction = (unitData[0].isGround())? GROUND_FRICTION: AIR_FRICTION;
       if(Math.abs(unitData[0].state.speed.x) <= friction) {
         unitData[0].state.speed.x = 0;
       } else {
@@ -223,7 +259,9 @@ class Unit {
       const partsImageList = partsData.getImageList(this);
 
       for(const partsImage of partsImageList) {
-        this.addImage(partsData, partsImage.id, partsImage.transform, partsImage.zIndex);
+        const isLeft = this.isLeft()? 0: 1;
+
+        this.addImage(partsData, partsImage.id[isLeft], partsImage.transform, partsImage.zIndex[isLeft]);
       }
     }
   }
@@ -487,10 +525,10 @@ const draw = function() {
 
   unitData[0].imageList.sort(function(a, b) {
     if(a.zIndex < b.zIndex) {
-      return (unitData[0].state.dirLeft? 1: -1);
+      return (unitData[0].isLeft()? 1: -1);
     }
     if(a.zIndex > b.zIndex) {
-      return (unitData[0].state.dirLeft? -1: 1);
+      return (unitData[0].isLeft()? -1: 1);
     }
 
     return 0;
@@ -512,7 +550,7 @@ const draw = function() {
     ctx.translate(unitTransform.x, unitTransform.y);
     ctx.rotate(getRad(unitTransform.rotate));
     ctx.scale(unitTransform.scale, unitTransform.scale);
-    if(!unitData[0].state.dirLeft) {
+    if(!unitData[0].isLeft()) {
       ctx.scale(-1, 1);
     }
     ctx.translate(transform.x, transform.y);
