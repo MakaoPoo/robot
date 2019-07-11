@@ -90,8 +90,8 @@
     }
 
     getImageList(unitData) {
-      const legRTransform = unitData.getJointTransform('legR');
-      const legLTransform = unitData.getJointTransform('legL');
+      const legRTransform = unitData.getJointGlobalTransform('legR');
+      const legLTransform = unitData.getJointGlobalTransform('legL');
 
       const imageList = [
         {

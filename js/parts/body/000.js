@@ -51,13 +51,11 @@
     }
 
     updatePartsState(unitData) {
-      const body = new Transform(0, 0, 0, 1);
 
-      unitData.setJointTransform('body', body);
     }
 
     getImageList(unitData) {
-      const bodyTransform = unitData.getJointTransform('body');
+      const bodyTransform = unitData.getJointGlobalTransform('body');
       const imageList = [
         {
           id: [0, 0],

@@ -42,13 +42,17 @@
     }
 
     updatePartsState(unitData) {
-      const handR = new Transform(0, 0, 0, 0.8);
+      // const armR = unitData.getJointTransform('armR');
+      // armR.x += 20;
 
+      const handR = new Transform(0, 0, 20, 0.8);
+
+      // unitData.setJointTransform('armR', armR);
       unitData.setJointTransform('handR', handR);
     }
 
     getImageList(unitData) {
-      const handRTransform = unitData.getJointTransform('handR');
+      const handRTransform = unitData.getJointGlobalTransform('handR');
 
       const imageList = [
         {

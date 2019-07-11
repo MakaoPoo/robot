@@ -60,12 +60,14 @@ class Unit {
         flag: false,
         angle: 0
       },
-      walkType: 'flow'
+      walkType: 'flow',
     }
 
     this.motion = {
+      moveFrame: 0,
       frame: 0,
-      name: 'flow'
+      id: null,
+      dash: false
     };
 
     this.input = {
@@ -85,15 +87,15 @@ class Unit {
     this.hitboxList = [];
   }
 
-  setMotion(name, frame) {
+  setMotion(name, id) {
     this.motion.name = name;
-    if(frame != null) {
-      this.motion.frame = frame;
+    if(id != null) {
+      this.motion.id = id;
     }
   }
 
   advanceMotion() {
-    this.motion.frame -= 1;
+    this.motion.frame += 1;
   }
 
   matchMotion(motionList) {
@@ -137,15 +139,10 @@ class Unit {
   }
 
   updateUnitState() {
-    console.log(this.motion.name);
     const state = this.state;
     state.accel = {x: 0, y: GRAVITY};
 
-    if(this.isGround()) {
-      this.setMotion('stand', 0);
-    } else {
-      this.setMotion('flow', 0);
-    }
+    ATTACH_MOTION['move'](this);
 
     if(this.input.keyDoubleFrame.frame > 0) {
       this.input.keyDoubleFrame.frame -= 1;
@@ -155,21 +152,13 @@ class Unit {
       if(this.input.keyDouble.id == 'a') {
         state.accel.x = -100;
         state.dash = true;
-        this.setMotion('stepL', 10);
       }
       if(this.input.keyDouble.id == 'd') {
         state.accel.x = 100;
         state.dash = true;
-        this.setMotion('stepR', 10);
       }
     }
     this.input.keyDouble.id = null;
-
-    if(this.matchMotion(['flow', 'stand'])) {
-      state.maxSpeed = {x: 15, y: 15};
-    } else {
-      state.maxSpeed = {x: 8, y: 15};
-    }
 
     if(this.input.keyList['a'] && !this.input.keyList['d']) {
       if(this.isGround()) {
@@ -277,12 +266,12 @@ class Unit {
     this.imageList.push(imageData);
   }
 
-  getJointTransform(jointName) {
+  getJointGlobalTransform(jointName) {
     const joint = this.jointList[jointName];
 
     let parentJoint = new Transform(0, 0, 0, 1);
     if(joint.parent) {
-      parentJoint = this.getJointTransform(joint.parent);
+      parentJoint = this.getJointGlobalTransform(joint.parent);
     }
 
     const scale = parentJoint.scale * joint.transform.scale;
@@ -297,6 +286,10 @@ class Unit {
       scale: joint.transform.scale
     }
 
+  }
+
+  getJointTransform(jointName) {
+    return this.jointList[jointName].transform;
   }
 
   setJointTransform(jointName, transform) {

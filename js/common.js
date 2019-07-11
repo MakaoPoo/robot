@@ -42,11 +42,15 @@ class Transform {
   }
 }
 
+const ALL_PARTS_NUMS = partsListTemplate(1, 2, 2, 2, 2, 1);
 const PARTS_ID_LENGTH = 3;
 
-const ALL_PARTS_NUMS = partsListTemplate(1, 2, 2, 2, 2, 1);
-
 const PARTS_CLASS_LIST = partsListTemplate({}, {}, {}, {}, {}, {});
+
+const ALL_MOTION_NUMS = 1;
+const MOTION_ID_LENGTH = 6;
+
+const ATTACH_MOTION = {};
 
 // const DRAW_HITBOX = true;
 const DRAW_HITBOX = false;

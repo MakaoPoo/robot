@@ -59,14 +59,12 @@
     }
 
     updatePartsState(unitData) {
-      const back = new Transform(0, 0, 0, 1);
-
-      unitData.setJointTransform('back', back);
+      
     }
 
     getImageList(unitData) {
-      const backTransform = unitData.getJointTransform('back');
-      const handLTransform = unitData.getJointTransform('handL');
+      const backTransform = unitData.getJointGlobalTransform('back');
+      const handLTransform = unitData.getJointGlobalTransform('handL');
 
       const imageList = [
         {

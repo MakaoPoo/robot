@@ -3,8 +3,8 @@ body {
 }
 
 #mainCanvas {
-  width: 1850;
-  height: 950;
+  width: 1920;
+  height: 1080;
   border: double;
 }
 #wireframe {

@@ -39,20 +39,12 @@
     }
 
     updatePartsState(unitData) {
-      const shldR = new Transform(0, 0, 0, 1);
-      const shldL = new Transform(0, 0, 0, 1);
-
-      shldR.y = -5;
-      shldR.rotate = -20;
-      shldL.rotate = -10;
-
-      unitData.setJointTransform('shldR', shldR);
-      unitData.setJointTransform('shldL', shldL);
+      
     }
 
     getImageList(unitData) {
-      const shldRTransform = unitData.getJointTransform('shldR');
-      const shldLTransform = unitData.getJointTransform('shldL');
+      const shldRTransform = unitData.getJointGlobalTransform('shldR');
+      const shldLTransform = unitData.getJointGlobalTransform('shldL');
 
       const imageList = [
         {
