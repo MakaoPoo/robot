@@ -111,3 +111,33 @@ const addTransform = function(tf1, tf2) {
 const turnRotate = function(rotate, isLeft) {
   return rotate * (isLeft? 1: -1)
 }
+
+const complementMotion = function(motionList, frame) {
+  const frameList = Object.keys(motionList);
+  let frame1, frame2;
+
+  for(let i = 0; i < frameList.length - 1; i++) {
+    const frame1 = frameList[i];
+    const frame2 = frameList[i + 1];
+
+    if(frame1 == frame) {
+      return motionList[frame1];
+    }
+
+    if(frame1 < frame && frame < frame2) {
+      const transform1 = motionList[frame1];
+      const transform2 = motionList[frame2];
+      const per2 = (frame - frame1) / (frame2 - frame1);
+      const per1 = 1 - per2;
+
+      const transform = {
+        x: transform1.x * per1 + transform2.x * per2,
+        y: transform1.y * per1 + transform2.y * per2,
+        rotate: transform1.rotate * per1 + transform2.rotate * per2,
+        scale: transform1.scale * per1 + transform2.scale * per2
+      }
+
+      return transform;
+    }
+  }
+}

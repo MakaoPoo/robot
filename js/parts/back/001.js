@@ -46,12 +46,12 @@
         {
           imagePos: {x: 256, y: 64, w: 256, h: 48},
           hitbox: {x: 4, y: 31, w: 22, h: 40},
-          pivot: {x: 231, y: 19}
+          pivot: {x: 233, y: 19}
         },
         {
           imagePos: {x: 0, y: 112, w: 512, h: 48},
           hitbox: {x: 4, y: 31, w: 22, h: 40},
-          pivot: {x: 232, y: 19}
+          pivot: {x: 234, y: 19}
         },
       ];
 
@@ -59,11 +59,12 @@
     }
 
     updatePartsState(unitData) {
-      
+
     }
 
     getImageList(unitData) {
       const backTransform = unitData.getJointGlobalTransform('back');
+      const handRTransform = unitData.getJointGlobalTransform('handR');
       const handLTransform = unitData.getJointGlobalTransform('handL');
 
       const imageList = [
@@ -73,24 +74,36 @@
           mirror: false,
           zIndex: [0, 0]
         },
+        // {
+        //   id: [2, 2],
+        //   transform: addTransform(backTransform, new Transform(8, -5, -130, 0.6)),
+        //   mirror: false,
+        //   zIndex: [150, 150]
+        // },
+        // {
+        //   id: [2, 2],
+        //   transform: addTransform(backTransform, new Transform(8, -5, -130, 0.6)),
+        //   mirror: false,
+        //   zIndex: [-150, -150]
+        // },
+        // {
+        //   id: [4, 4],
+        //   transform: addTransform(handLTransform, new Transform(0, 0, -45, 0.8)),
+        //   mirror: false,
+        //   zIndex: [-190, -190]
+        // },
         {
-          id: [2, 2],
-          transform: addTransform(backTransform, new Transform(8, -5, -130, 0.6)),
+          id: [3, 3],
+          transform: addTransform(handRTransform, new Transform(0, 0, -30, 0.8)),
           mirror: false,
-          zIndex: [150, 150]
+          zIndex: [190, 190]
         },
         {
-          id: [2, 2],
-          transform: addTransform(backTransform, new Transform(8, -5, -130, 0.6)),
-          mirror: false,
-          zIndex: [-150, -150]
-        },
-        {
-          id: [4, 4],
-          transform: addTransform(handLTransform, new Transform(0, 0, -45, 0.8)),
+          id: [3, 3],
+          transform: addTransform(handLTransform, new Transform(0, 0, -10, 0.8)),
           mirror: false,
           zIndex: [-190, -190]
-        }
+        },
       ];
 
       return imageList;

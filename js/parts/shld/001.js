@@ -31,7 +31,7 @@
         {
           imagePos: {x: 0, y: 0, w: 80, h: 48},
           hitbox: {x: 10, y: 13, w: 22, h: 28},
-          pivot: {x: 20, y: 22}
+          pivot: {x: 20, y: 24}
         }
       ];
 
@@ -39,7 +39,7 @@
     }
 
     updatePartsState(unitData) {
-      
+
     }
 
     getImageList(unitData) {

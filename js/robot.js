@@ -18,8 +18,8 @@ class Unit {
     this.parts = partsListTemplate();
     this.partsIdList = partsListTemplate(
       "000", //ボディ
-      "001", //アーム
-      "001", //ショルダー
+      "000", //アーム
+      "000", //ショルダー
       "001", //レッグ
       "001", //バック
       "000"  //ウェポン
@@ -112,6 +112,10 @@ class Unit {
     return this.state.dirLeft;
   }
 
+  isForwardMove() {
+    return (Math.sign(this.state.speed.x) < 0) == this.state.dirLeft;
+  }
+
   isGround() {
     return this.state.ground.flag;
   }
@@ -140,7 +144,7 @@ class Unit {
 
   updateUnitState() {
     const state = this.state;
-    state.accel = {x: 0, y: GRAVITY};
+    state.accel = {x: 0, y: 0};
 
     ATTACH_MOTION['move'](this);
 
@@ -162,7 +166,7 @@ class Unit {
 
     if(this.input.keyList['a'] && !this.input.keyList['d']) {
       if(this.isGround()) {
-        state.accel.x -= 2;
+        state.accel.x -= 1;
       } else {
         state.accel.x -= 1;
         if(state.dash) {
@@ -171,7 +175,7 @@ class Unit {
       }
     } else if(this.input.keyList['d'] && !this.input.keyList['a']) {
       if(this.isGround()) {
-        state.accel.x += 2;
+        state.accel.x += 1;
       } else {
         state.accel.x += 1;
         if(state.dash) {
@@ -180,7 +184,7 @@ class Unit {
       }
     }
 
-    if(Math.abs(state.accel.x) < 2 && Math.abs(state.speed.x) < 5) {
+    if(Math.abs(state.accel.x) < 1 && Math.abs(state.speed.x) < 2) {
       state.dash = false;
     }
 
@@ -210,7 +214,7 @@ class Unit {
     } else {
       state.speed.x += state.accel.x;
     }
-    state.speed.y += state.accel.y;
+    state.speed.y += state.accel.y + GRAVITY;
 
     if(state.speed.x >= state.maxSpeed.x) {
       state.speed.x = state.maxSpeed.x;

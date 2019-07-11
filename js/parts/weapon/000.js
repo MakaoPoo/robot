@@ -45,28 +45,28 @@
       // const armR = unitData.getJointTransform('armR');
       // armR.x += 20;
 
-      const handR = new Transform(0, 0, 20, 0.8);
+      // const handR = new Transform(0, 0, 20, 0.8);
 
       // unitData.setJointTransform('armR', armR);
-      unitData.setJointTransform('handR', handR);
+      // unitData.setJointTransform('handR', handR);
     }
 
     getImageList(unitData) {
       const handRTransform = unitData.getJointGlobalTransform('handR');
 
       const imageList = [
-        {
-          id: [0, 0],
-          transform: addTransform(handRTransform, new Transform(0, 0, 0, 1)),
-          mirror: false,
-          zIndex: [190, 190]
-        },
-        {
-          id: [1, 1],
-          transform: addTransform(handRTransform, new Transform(0, 0, 0, 1)),
-          mirror: false,
-          zIndex: [180, 210]
-        }
+        // {
+        //   id: [0, 0],
+        //   transform: addTransform(handRTransform, new Transform(0, 0, 0, 1)),
+        //   mirror: false,
+        //   zIndex: [190, 190]
+        // },
+        // {
+        //   id: [1, 1],
+        //   transform: addTransform(handRTransform, new Transform(0, 0, 0, 1)),
+        //   mirror: false,
+        //   zIndex: [180, 210]
+        // }
       ];
 
       return imageList;
