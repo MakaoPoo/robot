@@ -1,6 +1,6 @@
 (function() {
   const MotionId = "000000";
-  const MotionName = "ノーマル";
+  const MotionName = "ステップ";
 
   const attachMotion = function(unitData) {
 

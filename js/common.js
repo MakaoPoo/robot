@@ -42,6 +42,129 @@ class Transform {
   }
 }
 
+class Input {
+  config
+  mouse
+  keyList
+  keyDouble
+  keyDoubleFrame
+
+  constructor() {
+    this.config = {
+      left: 'a',
+      right: 'd',
+      up: 'w',
+      down: 's',
+    }
+
+    this.mouse = {x: 0, y: 0};
+    this.keyList = {};
+    this.keyDouble = {
+      id: null,
+      flag: false
+    };
+    this.keyDoubleFrame = {
+      id: null,
+      frame: 0,
+    };
+  }
+
+  getMouse() {
+    return this.mouse;
+  }
+  getMouseX() {
+    return this.mouse.x;
+  }
+  getMouseY() {
+    return this.mouse.y;
+  }
+  setMouse(x, y) {
+    this.mouse.x = x;
+    this.mouse.y = y;
+  }
+
+  advanceFrame() {
+    for(const keyCode in this.keyList) {
+      const key = this.keyList[keyCode];
+      if(key.flag) {
+        key.frame += 1;
+      }
+    }
+
+    this.keyDoubleFrame.frame -= 1;
+    this.keyDouble.id = null;
+  }
+
+  keyPress(keyCode) {
+    if(!(keyCode in this.keyList)) {
+      this.keyList[keyCode] = {
+        flag: false,
+        frame: 0
+      }
+    }
+
+    this.keyList[keyCode].flag = true;
+    this.keyList[keyCode].frame = 0;
+
+    if(this.keyDoubleFrame.id == keyCode && this.keyDoubleFrame.frame > 0){
+      this.keyDouble.id = keyCode;
+      this.keyDouble.flag = true;
+      this.keyDoubleFrame.frame = 0;
+
+    } else {
+      this.keyDoubleFrame.id = keyCode;
+      this.keyDoubleFrame.frame = KEY_DOUBLE_FRAME;
+    }
+  }
+
+  keyUp(keyCode) {
+    if(!(keyCode in this.keyList)) {
+      this.keyList[keyCode] = {
+        flag: false,
+        frame: 0
+      }
+    }
+
+    this.keyList[keyCode].flag = false;
+    this.keyList[keyCode].frame = 0;
+  }
+
+  getKeyCodeFlag(keyCode) {
+    if(keyCode in this.keyList) {
+      return this.keyList[keyCode].flag;
+    }
+
+    return false;
+  }
+
+  getKeyFlag(configKey) {
+    const keyCode = this.config[configKey];
+    if(keyCode in this.keyList) {
+      return this.keyList[keyCode].flag;
+    }
+
+    return false;
+  }
+
+  getLongPressKeyFrame(configKey) {
+    const keyCode = this.config[configKey];
+
+    if(keyCode in this.keyList) {
+      if(this.keyList[keyCode].flag) {
+        return this.keyList[keyCode].frame;
+      }
+    }
+
+    return -1;
+  }
+
+  isPressDoubleKey(configKey) {
+    const keyCode = this.config[configKey];
+    return (this.keyDouble.flag && this.keyDouble.id == keyCode);
+
+  }
+}
+
 const ALL_PARTS_NUMS = partsListTemplate(1, 2, 2, 2, 2, 1);
 const PARTS_ID_LENGTH = 3;
 
@@ -52,8 +175,8 @@ const MOTION_ID_LENGTH = 6;
 
 const ATTACH_MOTION = {};
 
-// const DRAW_HITBOX = true;
-const DRAW_HITBOX = false;
+let DRAW_HITBOX = false;
+// DRAW_HITBOX = true;
 
 const FRAME_SPLIT = 20;
 
@@ -62,14 +185,14 @@ const ROOF_BORDER_ANGLE = 20;
 
 const MIN_SPEED = 10;
 
-const AIR_FRICTION = 0.5;
+const AIR_FRICTION = 0.1;
 const GROUND_FRICTION = 1;
 
 const GRAVITY = 1;
 
 const KEY_DOUBLE_FRAME = 12;
 
-const FALL_MAX_SPEED = 25;
+const FALL_MAX_SPEED = 20;
 
 const getDot = function(vec1, vec2) {
   return vec1.x * vec2.x + vec1.y * vec2.y;
@@ -113,20 +236,22 @@ const turnRotate = function(rotate, isLeft) {
 }
 
 const complementMotion = function(motionList, frame) {
-  const frameList = Object.keys(motionList);
   let frame1, frame2;
 
-  for(let i = 0; i < frameList.length - 1; i++) {
-    const frame1 = frameList[i];
-    const frame2 = frameList[i + 1];
+  for(let i = 0; i < motionList.length - 1; i++) {
+    const motion1 = motionList[i];
+    const motion2 = motionList[i + 1];
+
+    const frame1 = motion1.frame;
+    const frame2 = motion2.frame;
 
     if(frame1 == frame) {
-      return motionList[frame1];
+      return motion1.transform;
     }
 
     if(frame1 < frame && frame < frame2) {
-      const transform1 = motionList[frame1];
-      const transform2 = motionList[frame2];
+      const transform1 = motion1.transform;
+      const transform2 = motion2.transform;
       const per2 = (frame - frame1) / (frame2 - frame1);
       const per1 = 1 - per2;
 
@@ -140,4 +265,8 @@ const complementMotion = function(motionList, frame) {
       return transform;
     }
   }
+}
+
+const loopIncrement = function(num, max) {
+  return (num + 1) % max;
 }

@@ -58,7 +58,8 @@ class Unit {
       dirLeft: true,
       ground: {
         flag: false,
-        angle: 0
+        angle: 0,
+        attraction: 0
       },
       walkType: 'flow',
     }
@@ -67,21 +68,11 @@ class Unit {
       moveFrame: 0,
       frame: 0,
       id: null,
-      dash: false
+      dash: false,
+      cancel: {}
     };
 
-    this.input = {
-      mouse: { x: 0, y: 0 },
-      keyList: {},
-      keyDouble: {
-        id: null,
-        flag: false
-      },
-      keyDoubleFrame: {
-        id: null,
-        frame: 0,
-      },
-    }
+    this.input = new Input();
 
     this.imageList = [];
     this.hitboxList = [];
@@ -112,12 +103,46 @@ class Unit {
     return this.state.dirLeft;
   }
 
-  isForwardMove() {
-    return (Math.sign(this.state.speed.x) < 0) == this.state.dirLeft;
+  getFrontSpeed() {
+    const dirNum = (this.isLeft()? -1: 1);
+
+    return this.state.speed.x * dirNum;
+  }
+
+  getAccelDir() {
+    const dirNum = (this.isLeft()? -1: 1);
+
+    if(this.state.accel.x == 0) {
+      return 0;
+    }
+
+    return Math.sign(this.state.accel.x) * dirNum;
+  }
+
+  restSpeed() {
+    const state = this.state;
+
+    if(state.speed.x >= state.maxSpeed.x) {
+      state.speed.x = state.maxSpeed.x;
+    }
+    if(state.speed.x <= -state.maxSpeed.x) {
+      state.speed.x = -state.maxSpeed.x;
+    }
+
+    if(state.speed.y >= FALL_MAX_SPEED) {
+      state.speed.y = FALL_MAX_SPEED;
+    }
+    if(state.speed.y <= -state.maxSpeed.y) {
+      state.speed.y = -state.maxSpeed.y;
+    }
   }
 
   isGround() {
     return this.state.ground.flag;
+  }
+
+  isDash() {
+    return this.state.dash;
   }
 
   setPartsId(type, id) {
@@ -134,64 +159,100 @@ class Unit {
   }
 
   dirTurn() {
-    if(this.transform.x > this.input.mouse.x) {
+    if(this.transform.x > this.input.getMouseX()) {
       this.state.dirLeft = true;
     }
-    if(this.transform.x < this.input.mouse.x) {
+    if(this.transform.x < this.input.getMouseX()) {
       this.state.dirLeft = false;
     }
   }
 
   updateUnitState() {
     const state = this.state;
+    const input = this.input;
     state.accel = {x: 0, y: 0};
 
-    ATTACH_MOTION['move'](this);
-
-    if(this.input.keyDoubleFrame.frame > 0) {
-      this.input.keyDoubleFrame.frame -= 1;
+    if(input.isPressDoubleKey('left')) {
+      state.accel.x = -100;
+      state.dash = true;
+    }
+    if(input.isPressDoubleKey('right')) {
+      state.accel.x = 100;
+      state.dash = true;
     }
 
-    if(this.input.keyDouble.flag) {
-      if(this.input.keyDouble.id == 'a') {
-        state.accel.x = -100;
-        state.dash = true;
-      }
-      if(this.input.keyDouble.id == 'd') {
-        state.accel.x = 100;
-        state.dash = true;
-      }
-    }
-    this.input.keyDouble.id = null;
+    const leftKey = input.getKeyFlag('left');
+    const rightKey = input.getKeyFlag('right');
 
-    if(this.input.keyList['a'] && !this.input.keyList['d']) {
-      if(this.isGround()) {
-        state.accel.x -= 1;
+    if(leftKey && rightKey) {
+      const breakAccel = 0.2 + (this.isGround()? 0.8: 0);
+      if(state.speed.x > 1) {
+        state.accel.x -= breakAccel;
+      }
+      if(state.speed.x < -1) {
+        state.accel.x += breakAccel;
+      }
+      if(Math.abs(state.speed.x) < 5) {
+        state.dash = false;
+      }
+    } else {
+      if(leftKey) {
+        if(this.isGround()) {
+          state.accel.x -= 1;
+        } else {
+          state.accel.x -= 0.5;
+          if(this.isDash()) {
+            state.accel.y -= 0.5;
+          }
+        }
+      } else if(rightKey) {
+        if(this.isGround()) {
+          state.accel.x += 1;
+        } else {
+          state.accel.x += 0.5;
+          if(this.isDash()) {
+            state.accel.y -= 0.5;
+          }
+        }
       } else {
-        state.accel.x -= 1;
-        if(state.dash) {
-          state.accel.y -= 0.5;
+        if(this.isGround() && Math.abs(state.speed.x) < 0.5) {
+          state.dash = false;
         }
       }
-    } else if(this.input.keyList['d'] && !this.input.keyList['a']) {
-      if(this.isGround()) {
-        state.accel.x += 1;
-      } else {
-        state.accel.x += 1;
-        if(state.dash) {
-          state.accel.y -= 0.5;
-        }
+    }
+
+    if(input.getKeyFlag('up') && !input.getKeyFlag('down')) {
+      if(!this.isDash() && this.isGround() && input.getLongPressKeyFrame('up') == 0) {
+        state.accel.y -= 15;
       }
-    }
 
-    if(Math.abs(state.accel.x) < 1 && Math.abs(state.speed.x) < 2) {
-      state.dash = false;
-    }
+      if(!leftKey && !rightKey) {
+        if(state.speed.x > 1) {
+          state.accel.x -= 0.5;
+        }
+        if(state.speed.x < -1) {
+          state.accel.x += 0.5;
+        }
+        if(Math.abs(state.speed.x) < 5) {
+          state.dash = false;
+        }
 
-    if(this.input.keyList['w'] && !this.input.keyList['s']) {
-      state.accel.y -= GRAVITY + 2;
-    } else if(this.input.keyList['s'] && !this.input.keyList['w']) {
+      }
+
+      state.ground.flag = false;
+      // state.dash = false;
+      state.accel.y -= GRAVITY + 1;
+    } else if(input.getKeyFlag('down') && !input.getKeyFlag('up')) {
       // state.accel.y += 2 - GRAVITY;
+    }
+
+    state.speed.y += state.accel.y + GRAVITY;
+
+    if(!input.getKeyFlag('up') && !this.isDash()) {
+      const attractionSpeed = state.ground.attraction * Math.abs(state.speed.x);
+      if(state.speed.y > 0 && state.speed.y < attractionSpeed) {
+        state.speed.y = attractionSpeed;
+      }
     }
 
     if(unitData[0].state.speed.x * unitData[0].state.accel.x <= 0) {
@@ -214,21 +275,10 @@ class Unit {
     } else {
       state.speed.x += state.accel.x;
     }
-    state.speed.y += state.accel.y + GRAVITY;
 
-    if(state.speed.x >= state.maxSpeed.x) {
-      state.speed.x = state.maxSpeed.x;
-    }
-    if(state.speed.x <= -state.maxSpeed.x) {
-      state.speed.x = -state.maxSpeed.x;
-    }
+    this.restSpeed();
 
-    if(state.speed.y >= FALL_MAX_SPEED) {
-      state.speed.y = FALL_MAX_SPEED;
-    }
-    if(state.speed.y <= -state.maxSpeed.y) {
-      state.speed.y = -state.maxSpeed.y;
-    }
+    ATTACH_MOTION['move'](this);
 
     for(const type in this.parts) {
       const partsData = this.parts[type];
@@ -239,6 +289,8 @@ class Unit {
       partsData.updatePartsState(this);
 
     }
+
+    input.advanceFrame();
   }
 
   updateImageList() {
@@ -326,36 +378,26 @@ $(function() {
 });
 
 $(document).on('keydown', function(e) {
-  if(!e) e = window.event;
-
   const input = unitData[playerId].input;
 
-  if(input.keyList[e.key]) {
+  if(input.getKeyCodeFlag(e.key)) {
     return;
   }
 
-  input.keyList[e.key] = true;
-
-  if(input.keyDoubleFrame.id == e.key && input.keyDoubleFrame.frame > 0){
-    input.keyDouble.id = e.key;
-    input.keyDouble.flag = true;
-    console.log(input.keyDoubleFrame.frame);
-    input.keyDoubleFrame.frame = 0;
-  } else {
-    input.keyDoubleFrame.id = e.key;
-    input.keyDoubleFrame.frame = KEY_DOUBLE_FRAME;
-  }
+  input.keyPress(e.key);
 });
 
 $(document).on('keyup', function(e) {
-  if(!e) e = window.event;
+  const input = unitData[playerId].input;
 
-  unitData[playerId].input.keyList[e.key] = false;
+  input.keyUp(e.key);
+
 });
 
 $(document).on('mousemove', function(e) {
-  unitData[playerId].input.mouse.x = e.pageX;
-  unitData[playerId].input.mouse.y = e.pageY;
+  const input = unitData[playerId].input;
+
+  input.setMouse(e.pageX, e.pageY);
 });
 
 const mainLoop = function(){
@@ -376,6 +418,7 @@ const mainLoop = function(){
 const advanceFrame = function() {
   unitData[0].state.ground.flag = false;
   unitData[0].state.ground.angle = FLOOR_BORDER_ANGLE;
+  unitData[0].state.ground.attraction = 0;
   unitData[0].state.frameSplitSpeed = {
     x: unitData[0].state.speed.x / FRAME_SPLIT,
     y: unitData[0].state.speed.y / FRAME_SPLIT
@@ -415,6 +458,7 @@ const advanceOneFrame = function() {
     nearestNvec: null,
     horizonDist: groundR,
     angle: null,
+    attraction: 0,
     flag: false,
     hitCircle: {
       x: unitTransform.x + legJoint.x,
@@ -445,6 +489,7 @@ const advanceOneFrame = function() {
     }
   }
   if(ground.flag) {
+    unitData[0].state.ground.attraction = ground.attraction;
     unitData[0].state.ground.flag = true;
     unitData[0].state.ground.angle = ground.angle;
     const pushY = ground.nearestNvec.y * (ground.hitCircle.r - ground.shortestD);
@@ -491,6 +536,13 @@ const hitCheckLineObj = function(obj, hitboxData) {
     } else {
       d = Math.sqrt(r2);
       dist = Math.abs(dotObjCv2 / obj.length);
+    }
+  }
+
+  if(d < hitboxData.hitCircle.r) {
+    const attraction = Math.abs(Math.tan(getRad(obj.angle)));
+    if('attraction' in hitboxData && hitboxData.attraction < attraction) {
+      hitboxData.attraction = attraction;
     }
   }
 
@@ -565,7 +617,7 @@ const draw = function() {
 
   ctx.strokeStyle = "#f00";
   ctx.beginPath();
-  ctx.arc(unitData[0].input.mouse.x, unitData[0].input.mouse.y, 25, 0, Math.PI * 2, false);
+  ctx.arc(unitData[0].input.getMouseX(), unitData[0].input.getMouseY(), 25, 0, Math.PI * 2, false);
   ctx.stroke();
 
   if(DRAW_HITBOX) {

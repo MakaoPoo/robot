@@ -26,7 +26,7 @@
         legL: {x: 2, y: 21, parent: 'body'},
         back: {x: 22, y: -20, parent: 'body'}
       };
-      this.collisionR = 27;
+      this.collisionR = 30;
 
       this.loadImage();
     }
