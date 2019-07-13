@@ -355,26 +355,61 @@ class Unit {
 
 $(window).resize(function() {
   const $canvas = $('#mainCanvas');
-  $canvas[0].width = $canvas.width();
-  $canvas[0].height = $canvas.height();
+  $canvas[0].width = 1920;
+  $canvas[0].height = 1080;
 
 });
 
 $(function() {
+  $('p').text('bbb');
+  loadGameData();
+
+  loading(function() {
+    let partsComplete = 0;
+
+    for(const partsType in ALL_PARTS_NUMS) {
+      const partsNums = ALL_PARTS_NUMS[partsType];
+      console.log(Object.keys(PARTS_CLASS_LIST[partsType]).length + ' / ' + partsNums);
+      if(Object.keys(PARTS_CLASS_LIST[partsType]).length == partsNums) {
+        partsComplete += 1;
+      }
+    }
+
+    for(let i = 0; i < ALL_MOTION_NUMS; i++) {
+      console.log(Object.keys(ATTACH_MOTION).length + ' / ' + ALL_MOTION_NUMS);
+      if(Object.keys(ATTACH_MOTION).length == ALL_MOTION_NUMS + 1) {
+        partsComplete += 1;
+      }
+    }
+    console.log(partsComplete);
+
+    if(partsComplete == 6 + 1) {
+      return true;
+    }
+
+    return false;
+  },
+  function() {
+    mainFunc();
+  });
+});
+
+const mainFunc = function() {
   unitData.push(new Unit());
-  stageData = new Stage();
+  stageData = new STAGE_CLASS_LIST['000']();
+
+  $(window).resize();
 
   const $canvas = $('#mainCanvas');
-  $canvas[0].width = $canvas.width();
-  $canvas[0].height = $canvas.height();
-
-  const $wireframe = $('#wireframe');
-  $wireframe[0].width = $canvas.width();
-  $wireframe[0].height = $canvas.height();
-  $wireframe.css('left', 0);
-  $wireframe.css('top', 0);
+  $canvas[0].requestPointerLock = $canvas[0].requestPointerLock || $canvas[0].mozRequestPointerLock || $canvas[0].webkitRequestPointerLock;
 
   mainLoop();
+}
+
+$('#mainCanvas').on('click', function() {
+  if(document.pointerLockElement === null) {
+    $(this)[0].requestPointerLock();
+  }
 });
 
 $(document).on('keydown', function(e) {
@@ -395,9 +430,14 @@ $(document).on('keyup', function(e) {
 });
 
 $(document).on('mousemove', function(e) {
-  const input = unitData[playerId].input;
+  if(unitData[playerId]) {
+    if(document.pointerLockElement === $('#mainCanvas')[0]) {
+      const input = unitData[playerId].input;
+      e = e.originalEvent;
 
-  input.setMouse(e.pageX, e.pageY);
+      input.moveMouse(e.movementX, e.movementY);
+    }
+  }
 });
 
 const mainLoop = function(){
@@ -660,7 +700,7 @@ const drawStage = function(ctx) {
 }
 
 const drawImage = function(ctx, image, sx, sy, sw, sh, dx, dy, dw, dh) {
-  if(image != null) {
+  if(image != null && image.width != 0) {
     ctx.drawImage(image, sx, sy, sw, sh, dx, dy, dw, dh);
   }
 }

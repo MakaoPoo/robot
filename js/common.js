@@ -57,7 +57,7 @@ class Input {
       down: 's',
     }
 
-    this.mouse = {x: 0, y: 0};
+    this.mouse = {x: 0, y: 0, minX: 0, minY: 0, maxX: 1920, maxY: 1080};
     this.keyList = {};
     this.keyDouble = {
       id: null,
@@ -81,6 +81,23 @@ class Input {
   setMouse(x, y) {
     this.mouse.x = x;
     this.mouse.y = y;
+  }
+  moveMouse(x, y) {
+    this.mouse.x += x;
+    if(this.mouse.x < this.mouse.minX) {
+      this.mouse.x = this.mouse.minX;
+    }
+    if(this.mouse.x > this.mouse.maxX) {
+      this.mouse.x = this.mouse.maxX;
+    }
+
+    this.mouse.y += y;
+    if(this.mouse.y < this.mouse.minY) {
+      this.mouse.y = this.mouse.minY;
+    }
+    if(this.mouse.y > this.mouse.maxY) {
+      this.mouse.y = this.mouse.maxY;
+    }
   }
 
   advanceFrame() {
@@ -165,15 +182,58 @@ class Input {
   }
 }
 
+const loading = function(conditionsFunc, doneFunc) {
+  if(conditionsFunc()) {
+    doneFunc();
+  } else {
+    setTimeout(function() {
+      loading(conditionsFunc, doneFunc)
+    }, 500);
+  }
+}
+
 const ALL_PARTS_NUMS = partsListTemplate(1, 2, 2, 2, 2, 1);
 const PARTS_ID_LENGTH = 3;
-
 const PARTS_CLASS_LIST = partsListTemplate({}, {}, {}, {}, {}, {});
 
 const ALL_MOTION_NUMS = 1;
 const MOTION_ID_LENGTH = 6;
-
 const ATTACH_MOTION = {};
+
+const ALL_STAGE_NUMS = 1;
+const STAGE_ID_LENGTH = 3;
+const STAGE_CLASS_LIST = {};
+
+const loadGameData = function() {
+  for(const partsType in ALL_PARTS_NUMS){
+    const partsNums = ALL_PARTS_NUMS[partsType];
+
+    for(let i = 0; i < partsNums; i++) {
+      const id = ('000' + i).slice(-PARTS_ID_LENGTH);
+      const script = document.createElement('script');
+      script.src = 'js/parts/'+ partsType +'/'+ id +'.js';
+      document.body.appendChild(script);
+    }
+  }
+
+  for(let i = 0; i < ALL_MOTION_NUMS; i++) {
+    const id = ('000000' + i).slice(-MOTION_ID_LENGTH);
+    const script = document.createElement('script');
+    script.src = 'js/motion/'+ id +'.js';
+    document.body.appendChild(script);
+  }
+
+  for(let i = 0; i < ALL_MOTION_NUMS; i++) {
+    const id = ('000' + i).slice(-STAGE_ID_LENGTH);
+    const script = document.createElement('script');
+    script.src = 'js/stage/'+ id +'.js';
+    document.body.appendChild(script);
+  }
+
+  const script = document.createElement('script');
+  script.src = 'js/motion/move.js';
+  document.body.appendChild(script);
+}
 
 let DRAW_HITBOX = false;
 // DRAW_HITBOX = true;

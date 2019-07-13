@@ -1,13 +1,22 @@
-body {
+html, body {
+  position: relative;
   margin: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #000000;
 }
 
 #mainCanvas {
-  width: 1920;
-  height: 1080;
-  border: double;
-}
-#wireframe {
   position: absolute;
-  border: double;
+  width: 177.777vh;
+  height: 56.25vw‬;
+  max-width: 100vw;
+  max-height: 100vh;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+p {
+  color: #ffffff;
 }
