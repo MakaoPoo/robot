@@ -4,13 +4,6 @@
   const PartsName = "ノーマル";
 
   class Body000 {
-    id
-    name
-    imageSrc
-    vtxList
-    joint
-    collisionR
-
     constructor() {
       this.id = PartsId;
       this.name = PartsName;

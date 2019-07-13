@@ -4,12 +4,6 @@
   const PartsName = "ジャスティス";
 
   class Shld000 {
-    id
-    name
-    imageSrc
-    vtxList
-    joint
-
     constructor() {
       this.id = PartsId;
       this.name = PartsName;

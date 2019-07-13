@@ -4,12 +4,6 @@
   const PartsName = "スーパードッズライフル";
 
   class Weapon000 {
-    id
-    name
-    imageSrc
-    vtxList
-    joint
-
     constructor() {
       this.id = PartsId;
       this.name = PartsName;

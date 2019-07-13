@@ -4,12 +4,6 @@
   const PartsName = "Mk-2";
 
   class Back000 {
-    id
-    name
-    imageSrc
-    vtxList
-    joint
-
     constructor() {
       this.id = PartsId;
       this.name = PartsName;

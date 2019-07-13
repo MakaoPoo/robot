@@ -4,13 +4,6 @@
   const PartsName = "エピオン";
 
   class Leg001 {
-    id
-    name
-    imageSrc
-    vtxList
-    joint
-    groundR
-
     constructor() {
       this.id = PartsId;
       this.name = PartsName;

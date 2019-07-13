@@ -3,11 +3,6 @@
   const StageName = "ビル";
 
   class Stage {
-    id
-    name
-    imageSrc
-    vtxList
-
     constructor() {
       this.id = StageId;
       this.name = StageName

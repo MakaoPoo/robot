@@ -4,12 +4,6 @@
   const PartsName = "ステイメン";
 
   class Arm000 {
-    id
-    name
-    imageSrc
-    vtxList
-    joint
-
     constructor() {
       this.id = PartsId;
       this.name = PartsName;
@@ -48,7 +42,7 @@
     }
 
     updatePartsState(unitData) {
-      
+
     }
 
     getImageList(unitData) {

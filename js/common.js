@@ -12,11 +12,6 @@ const partsListTemplate = function(body, arm, shld, leg, back, weapon) {
 }
 
 class Transform {
-  x
-  y
-  rotate
-  scale
-
   constructor(x, y, rotate, scale) {
     this.x = 0;
     this.y = 0;
@@ -43,12 +38,6 @@ class Transform {
 }
 
 class Input {
-  config
-  mouse
-  keyList
-  keyDouble
-  keyDoubleFrame
-
   constructor() {
     this.config = {
       left: 'a',
@@ -271,10 +260,10 @@ const getDeg = function(rad) {
 }
 
 const rotateVec = function(x, y, deg) {
-    const rotateX = Math.cos(getRad(deg)) * x - Math.sin(getRad(deg)) * y;
-    const rotateY = Math.sin(getRad(deg)) * x + Math.cos(getRad(deg)) * y;
+  const rotateX = Math.cos(getRad(deg)) * x - Math.sin(getRad(deg)) * y;
+  const rotateY = Math.sin(getRad(deg)) * x + Math.cos(getRad(deg)) * y;
 
-    return {x: rotateX, y: rotateY};
+  return {x: rotateX, y: rotateY};
 }
 
 const addTransform = function(tf1, tf2) {

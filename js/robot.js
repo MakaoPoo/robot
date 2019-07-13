@@ -4,16 +4,6 @@ let playerId = 0;
 let stageData;
 
 class Unit {
-  parts
-  partsIdList
-  transform
-  joint
-  state
-  motion
-  input
-  imageList
-  hitboxList
-
   constructor() {
     this.parts = partsListTemplate();
     this.partsIdList = partsListTemplate(
@@ -361,7 +351,6 @@ $(window).resize(function() {
 });
 
 $(function() {
-  $('p').text('bbb');
   loadGameData();
 
   loading(function() {
@@ -413,19 +402,23 @@ $('#mainCanvas').on('click', function() {
 });
 
 $(document).on('keydown', function(e) {
-  const input = unitData[playerId].input;
+  if(unitData[playerId]) {
+    const input = unitData[playerId].input;
 
-  if(input.getKeyCodeFlag(e.key)) {
-    return;
+    if(input.getKeyCodeFlag(e.key)) {
+      return;
+    }
+
+    input.keyPress(e.key);
   }
-
-  input.keyPress(e.key);
 });
 
 $(document).on('keyup', function(e) {
-  const input = unitData[playerId].input;
+  if(unitData[playerId]) {
+    const input = unitData[playerId].input;
 
-  input.keyUp(e.key);
+    input.keyUp(e.key);
+  }
 
 });
 
@@ -438,6 +431,118 @@ $(document).on('mousemove', function(e) {
       input.moveMouse(e.movementX, e.movementY);
     }
   }
+});
+
+$('#punicon').on('touchstart', function(e) {
+  if(!unitData[playerId]) {
+    return;
+  }
+  const input = unitData[playerId].input;
+
+  const $punicon = $('#punicon');
+  const $lever = $('#punicon_lever');
+  const $movable = $('#punicon_movable_circle');
+
+  const puniconLeft = $punicon.offset().left;
+  const puniconTop = $punicon.offset().top;
+
+  const centerX = $punicon.width() / 2;
+  const centerY = $punicon.height() / 2;
+
+  const movableR = $movable.width() / 2;
+
+  const leverWidth = $lever.width();
+  const leverHeight = $lever.height();
+
+  const moveLever = function(e) {
+    let touchX = e.touches[0].pageX - puniconLeft - centerX;
+    let touchY = e.touches[0].pageY - puniconTop - centerY;
+
+    if(touchX * touchX + touchY * touchY > movableR * movableR) {
+      const touchRad = Math.atan2(touchY, touchX);
+
+      touchX = movableR * Math.cos(touchRad);
+      touchY = movableR * Math.sin(touchRad);
+    }
+
+    const leverX = touchX - leverWidth / 2;
+    const leverY = touchY - leverHeight / 2;
+
+    $lever.css('transform', 'translate('+ leverX +'px, '+ leverY +'px)')
+
+    let keyList = {a: -1, d: -1, w: -1, s: -1};
+
+    if(touchX * touchX + touchY * touchY > movableR * movableR * 0.25) {
+      if(Math.abs(touchX / touchY) > 0.5) {
+        if(touchX < 0) {
+          if(!input.getKeyCodeFlag('a')) {
+            keyList['a'] = 1;
+          } else {
+            keyList['a'] = 0;
+          }
+        }
+
+        if(touchX > 0) {
+          if(!input.getKeyCodeFlag('d')) {
+            keyList['d'] = 1;
+          } else {
+            keyList['d'] = 0;
+          }
+        }
+
+      }
+
+      if(Math.abs(touchY / touchX) > 0.5) {
+        if(touchY < 0) {
+          if(!input.getKeyCodeFlag('w')) {
+            keyList['w'] = 1;
+          } else {
+            keyList['w'] = 0;
+          }
+        }
+
+        if(touchY > 0) {
+          if(!input.getKeyCodeFlag('s')) {
+            keyList['s'] = 1;
+          } else {
+            keyList['s'] = 0;
+          }
+        }
+
+      }
+    }
+
+    for(const keyCode in keyList) {
+      const keyFlag = keyList[keyCode];
+      if(keyFlag == 1) {
+        input.keyPress(keyCode);
+      }
+      if(keyFlag == -1) {
+        input.keyUp(keyCode);
+      }
+    }
+
+  };
+
+  moveLever(e);
+
+  $('html').on('touchmove.punicon', function(e) {
+    moveLever(e);
+
+  });
+  $('html').on('touchend.punicon', function(e) {
+    $lever.css('transform', 'translate(-50%, -50%)')
+
+    input.keyUp('d');
+    input.keyUp('a');
+    input.keyUp('w');
+    input.keyUp('s');
+
+    $('html').off('touchmove.punicon');
+    $('html').off('touchend.punicon');
+  });
+
+  return false;
 });
 
 const mainLoop = function(){

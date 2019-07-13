@@ -4,12 +4,6 @@
   const PartsName = "ソードインパルス";
 
   class Back001 {
-    id
-    name
-    imageSrc
-    vtxList
-    joint
-
     constructor() {
       this.id = PartsId;
       this.name = PartsName;
