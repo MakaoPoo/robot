@@ -46,7 +46,10 @@ class Input {
       down: 's',
     }
 
-    this.mouse = {x: 0, y: 0, minX: 0, minY: 0, maxX: 1920, maxY: 1080};
+    this.mouse = {
+      x: 1920 / 2, y: 1080 / 2,
+      minX: 0, minY: 0,
+      maxX: 1920, maxY: 1080};
     this.keyList = {};
     this.keyDouble = {
       id: null,
@@ -171,6 +174,44 @@ class Input {
   }
 }
 
+class Interface {
+  constructor() {
+    this.pointer = {
+      id: 2,
+      imageSrc: new Image()
+    }
+
+    this.loadImage();
+  }
+
+  loadImage() {
+    this.pointer.imageSrc.src = "resource/pointer.png";
+  }
+
+  getPointerImage() {
+    if(this.pointer.imageSrc.width == 0) {
+      return null;
+    }
+
+    const id = this.pointer.id;
+    const imageSrc = this.pointer.imageSrc;
+
+    const pointerW = 64;
+    const pointerH = 64;
+    const numX = Math.floor(imageSrc.width / pointerW);
+    const numY = Math.floor(imageSrc.height / pointerH);
+
+    const imageData = {
+      imageSrc: imageSrc,
+      x: (id % numX) * pointerW,
+      y: (Math.floor(id / numX) % numY) * pointerH,
+      width: pointerW,
+      height: pointerH
+    }
+    return imageData;
+  }
+}
+
 const loading = function(conditionsFunc, doneFunc) {
   if(conditionsFunc()) {
     doneFunc();
@@ -185,7 +226,7 @@ const ALL_PARTS_NUMS = partsListTemplate(1, 2, 2, 2, 2, 1);
 const PARTS_ID_LENGTH = 3;
 const PARTS_CLASS_LIST = partsListTemplate({}, {}, {}, {}, {}, {});
 
-const ALL_MOTION_NUMS = 1;
+const ALL_MOTION_NUMS = 2;
 const MOTION_ID_LENGTH = 6;
 const ATTACH_MOTION = {};
 
@@ -212,16 +253,12 @@ const loadGameData = function() {
     document.body.appendChild(script);
   }
 
-  for(let i = 0; i < ALL_MOTION_NUMS; i++) {
+  for(let i = 0; i < ALL_STAGE_NUMS; i++) {
     const id = ('000' + i).slice(-STAGE_ID_LENGTH);
     const script = document.createElement('script');
     script.src = 'js/stage/'+ id +'.js';
     document.body.appendChild(script);
   }
-
-  const script = document.createElement('script');
-  script.src = 'js/motion/move.js';
-  document.body.appendChild(script);
 }
 
 let DRAW_HITBOX = false;

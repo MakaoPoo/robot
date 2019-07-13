@@ -10,7 +10,7 @@ class Unit {
       "000", //ボディ
       "000", //アーム
       "000", //ショルダー
-      "001", //レッグ
+      "000", //レッグ
       "001", //バック
       "000"  //ウェポン
     );
@@ -51,6 +51,7 @@ class Unit {
         angle: 0,
         attraction: 0
       },
+      dash: false,
       walkType: 'flow',
     }
 
@@ -58,21 +59,31 @@ class Unit {
       moveFrame: 0,
       frame: 0,
       id: null,
-      dash: false,
+      option: {},
+      type: {},
       cancel: {}
     };
 
     this.input = new Input();
 
+    this.interface = new Interface();
+
     this.imageList = [];
     this.hitboxList = [];
   }
 
-  setMotion(name, id) {
-    this.motion.name = name;
-    if(id != null) {
-      this.motion.id = id;
+  setMotion(id, option) {
+    if(this.motion.id != id) {
+      this.motion.frame = 0;
+      this.motion.option = (option? option: {});
     }
+    this.motion.id = id;
+  }
+
+  resetMotion(id, option) {
+    this.motion.id = id;
+    this.motion.frame = 0;
+    this.motion.option = (option? option: {});
   }
 
   advanceMotion() {
@@ -80,8 +91,8 @@ class Unit {
   }
 
   matchMotion(motionList) {
-    for(const motionName of motionList) {
-      if(this.motion.name == motionName) {
+    for(const motionId of motionList) {
+      if(this.motion.id == motionId) {
         return true;
       }
     }
@@ -99,7 +110,7 @@ class Unit {
     return this.state.speed.x * dirNum;
   }
 
-  getAccelDir() {
+  getFrontAccel() {
     const dirNum = (this.isLeft()? -1: 1);
 
     if(this.state.accel.x == 0) {
@@ -163,12 +174,10 @@ class Unit {
     state.accel = {x: 0, y: 0};
 
     if(input.isPressDoubleKey('left')) {
-      state.accel.x = -100;
-      state.dash = true;
+      this.resetMotion('000001', {dirLeft: true, dash: true});
     }
     if(input.isPressDoubleKey('right')) {
-      state.accel.x = 100;
-      state.dash = true;
+      this.resetMotion('000001', {dirLeft: false, dash: true});
     }
 
     const leftKey = input.getKeyFlag('left');
@@ -230,7 +239,6 @@ class Unit {
       }
 
       state.ground.flag = false;
-      // state.dash = false;
       state.accel.y -= GRAVITY + 1;
     } else if(input.getKeyFlag('down') && !input.getKeyFlag('up')) {
       // state.accel.y += 2 - GRAVITY;
@@ -268,7 +276,11 @@ class Unit {
 
     this.restSpeed();
 
-    ATTACH_MOTION['move'](this);
+    ATTACH_MOTION['000000'](this);
+
+    if(this.motion.id != null) {
+      ATTACH_MOTION[this.motion.id](this);
+    }
 
     for(const type in this.parts) {
       const partsData = this.parts[type];
@@ -372,7 +384,7 @@ $(function() {
     }
     console.log(partsComplete);
 
-    if(partsComplete == 6 + 1) {
+    if(partsComplete == 6) {
       return true;
     }
 
@@ -557,7 +569,7 @@ const mainLoop = function(){
   draw();
 
   requestAnimationFrame(mainLoop);
-  // setTimeout(mainLoop, 100);
+  // setTimeout(mainLoop, 50);
 }
 
 const advanceFrame = function() {
@@ -760,10 +772,17 @@ const draw = function() {
 
   }
 
-  ctx.strokeStyle = "#f00";
-  ctx.beginPath();
-  ctx.arc(unitData[0].input.getMouseX(), unitData[0].input.getMouseY(), 25, 0, Math.PI * 2, false);
-  ctx.stroke();
+  const pointerImage = unitData[0].interface.getPointerImage();
+
+  if(pointerImage) {
+    drawImage(ctx, pointerImage.imageSrc,
+      pointerImage.x, pointerImage.y,
+      pointerImage.width, pointerImage.height,
+      unitData[0].input.getMouseX() - pointerImage.width,
+      unitData[0].input.getMouseY() - pointerImage.height,
+      pointerImage.width * 2, pointerImage.height * 2
+    );
+  }
 
   if(DRAW_HITBOX) {
     const legJoint = unitData[0].parts.body.joint.legR;
