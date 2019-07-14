@@ -228,7 +228,7 @@ const PARTS_CLASS_LIST = partsListTemplate({}, {}, {}, {}, {}, {});
 
 const ALL_MOTION_NUMS = 2;
 const MOTION_ID_LENGTH = 6;
-const ATTACH_MOTION = {};
+const MOTION_CLASS_LIST = {};
 
 const ALL_STAGE_NUMS = 1;
 const STAGE_ID_LENGTH = 3;

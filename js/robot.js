@@ -9,9 +9,9 @@ class Unit {
     this.partsIdList = partsListTemplate(
       "000", //ボディ
       "000", //アーム
-      "000", //ショルダー
+      "001", //ショルダー
       "000", //レッグ
-      "001", //バック
+      "000", //バック
       "000"  //ウェポン
     );
 
@@ -39,12 +39,22 @@ class Unit {
       }
     }
 
+    this.spec = {
+      walkSpeed: 6,
+      dashSpeed: 15,
+      jumpSpeed: 15,
+      stepSpeed: 20,
+      walkAccel: 1,
+      dashAccel: 0.5,
+      jumpAccel: 0.5
+    }
+
     this.state = {
       pos: {x: 0, y: 0},
       speed: {x: 0, y: 0},
       accel: {x: 0, y: 0},
       frameSplitSpeed: {x: 0, y: 0},
-      maxSpeed: {x: 15, y: 15},
+      maxSpeed: {x: 0, y: 0},
       dirLeft: true,
       ground: {
         flag: false,
@@ -52,13 +62,13 @@ class Unit {
         attraction: 0
       },
       dash: false,
-      walkType: 'flow',
+      walkType: 'walk',
     }
 
     this.motion = {
       moveFrame: 0,
       frame: 0,
-      id: null,
+      id: '000000',
       option: {},
       type: {},
       cancel: {}
@@ -75,15 +85,19 @@ class Unit {
   setMotion(id, option) {
     if(this.motion.id != id) {
       this.motion.frame = 0;
-      this.motion.option = (option? option: {});
+      this.motion.option = {};
     }
     this.motion.id = id;
+
+    MOTION_CLASS_LIST[this.motion.id].initMotionState(this);
   }
 
   resetMotion(id, option) {
     this.motion.id = id;
     this.motion.frame = 0;
-    this.motion.option = (option? option: {});
+    this.motion.option = {};
+
+    MOTION_CLASS_LIST[this.motion.id].initMotionState(this);
   }
 
   advanceMotion() {
@@ -170,116 +184,50 @@ class Unit {
 
   updateUnitState() {
     const state = this.state;
+    const spec = this.spec;
     const input = this.input;
     state.accel = {x: 0, y: 0};
 
     if(input.isPressDoubleKey('left')) {
-      this.resetMotion('000001', {dirLeft: true, dash: true});
+      this.resetMotion('000001');
+      this.motion.option.dirLeft = true;
     }
     if(input.isPressDoubleKey('right')) {
-      this.resetMotion('000001', {dirLeft: false, dash: true});
+      this.resetMotion('000001');
+      this.motion.option.dirLeft = false;
     }
 
-    const leftKey = input.getKeyFlag('left');
-    const rightKey = input.getKeyFlag('right');
-
-    if(leftKey && rightKey) {
-      const breakAccel = 0.2 + (this.isGround()? 0.8: 0);
-      if(state.speed.x > 1) {
-        state.accel.x -= breakAccel;
-      }
-      if(state.speed.x < -1) {
-        state.accel.x += breakAccel;
-      }
-      if(Math.abs(state.speed.x) < 5) {
-        state.dash = false;
-      }
-    } else {
-      if(leftKey) {
-        if(this.isGround()) {
-          state.accel.x -= 1;
-        } else {
-          state.accel.x -= 0.5;
-          if(this.isDash()) {
-            state.accel.y -= 0.5;
-          }
-        }
-      } else if(rightKey) {
-        if(this.isGround()) {
-          state.accel.x += 1;
-        } else {
-          state.accel.x += 0.5;
-          if(this.isDash()) {
-            state.accel.y -= 0.5;
-          }
-        }
-      } else {
-        if(this.isGround() && Math.abs(state.speed.x) < 0.5) {
-          state.dash = false;
-        }
-      }
+    if(this.motion.id != null) {
+      MOTION_CLASS_LIST[this.motion.id].updateState(this);
     }
 
-    if(input.getKeyFlag('up') && !input.getKeyFlag('down')) {
-      if(!this.isDash() && this.isGround() && input.getLongPressKeyFrame('up') == 0) {
-        state.accel.y -= 15;
-      }
-
-      if(!leftKey && !rightKey) {
-        if(state.speed.x > 1) {
-          state.accel.x -= 0.5;
-        }
-        if(state.speed.x < -1) {
-          state.accel.x += 0.5;
-        }
-        if(Math.abs(state.speed.x) < 5) {
-          state.dash = false;
-        }
-
-      }
-
-      state.ground.flag = false;
-      state.accel.y -= GRAVITY + 1;
-    } else if(input.getKeyFlag('down') && !input.getKeyFlag('up')) {
-      // state.accel.y += 2 - GRAVITY;
-    }
-
-    state.speed.y += state.accel.y + GRAVITY;
-
-    if(!input.getKeyFlag('up') && !this.isDash()) {
-      const attractionSpeed = state.ground.attraction * Math.abs(state.speed.x);
-      if(state.speed.y > 0 && state.speed.y < attractionSpeed) {
-        state.speed.y = attractionSpeed;
-      }
-    }
-
-    if(unitData[0].state.speed.x * unitData[0].state.accel.x <= 0) {
+    if(state.speed.x * state.accel.x <= 0) {
       const friction = (unitData[0].isGround())? GROUND_FRICTION: AIR_FRICTION;
-      if(Math.abs(unitData[0].state.speed.x) <= friction) {
-        unitData[0].state.speed.x = 0;
+      if(Math.abs(state.speed.x) <= friction) {
+        state.speed.x = 0;
       } else {
-        if(unitData[0].state.speed.x > 0) {
-          unitData[0].state.speed.x -= friction;
+        if(state.speed.x > 0) {
+          state.speed.x -= friction;
         } else {
-          unitData[0].state.speed.x += friction;
+          state.speed.x += friction;
         }
       }
     }
 
     if(Math.abs(state.speed.x) < MIN_SPEED
     && Math.abs(state.speed.x + state.accel.x) < MIN_SPEED
-    && state.speed * state.accel.x < 0) {
+    && state.speed * state.accel.x <= 0) {
       state.speed.x = 0;
     } else {
       state.speed.x += state.accel.x;
     }
 
+    state.speed.y += state.accel.y;
+
     this.restSpeed();
 
-    ATTACH_MOTION['000000'](this);
-
     if(this.motion.id != null) {
-      ATTACH_MOTION[this.motion.id](this);
+      MOTION_CLASS_LIST[this.motion.id].attachTransform(this);
     }
 
     for(const type in this.parts) {
@@ -366,25 +314,25 @@ $(function() {
   loadGameData();
 
   loading(function() {
-    let partsComplete = 0;
+    let dataComplete = 0;
 
     for(const partsType in ALL_PARTS_NUMS) {
       const partsNums = ALL_PARTS_NUMS[partsType];
       console.log(Object.keys(PARTS_CLASS_LIST[partsType]).length + ' / ' + partsNums);
       if(Object.keys(PARTS_CLASS_LIST[partsType]).length == partsNums) {
-        partsComplete += 1;
+        dataComplete += 1;
       }
     }
 
     for(let i = 0; i < ALL_MOTION_NUMS; i++) {
-      console.log(Object.keys(ATTACH_MOTION).length + ' / ' + ALL_MOTION_NUMS);
-      if(Object.keys(ATTACH_MOTION).length == ALL_MOTION_NUMS + 1) {
-        partsComplete += 1;
+      console.log(Object.keys(MOTION_CLASS_LIST).length + ' / ' + ALL_MOTION_NUMS);
+      if(Object.keys(MOTION_CLASS_LIST).length == ALL_MOTION_NUMS + 1) {
+        dataComplete += 1;
       }
     }
-    console.log(partsComplete);
+    console.log(dataComplete);
 
-    if(partsComplete == 6) {
+    if(dataComplete == 6) {
       return true;
     }
 
