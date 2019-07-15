@@ -12,7 +12,7 @@ class Unit {
       "001", //ショルダー
       "000", //レッグ
       "000", //バック
-      "000"  //ウェポン
+      "001"  //ウェポン
     );
 
     for(const partsType in this.partsIdList) {
@@ -44,7 +44,7 @@ class Unit {
       dashSpeed: 15,
       jumpSpeed: 15,
       stepSpeed: 20,
-      walkAccel: 1,
+      walkAccel: 2,
       dashAccel: 0.5,
       jumpAccel: 0.5
     }
@@ -187,6 +187,10 @@ class Unit {
     const spec = this.spec;
     const input = this.input;
     state.accel = {x: 0, y: 0};
+
+    if(input.getLongPressKeyFrame('attack1') == 0) {
+      this.resetMotion('000002');
+    }
 
     if(input.isPressDoubleKey('left')) {
       this.resetMotion('000001');
@@ -358,6 +362,58 @@ const mainFunc = function() {
 $('#mainCanvas').on('click', function() {
   if(document.pointerLockElement === null) {
     $(this)[0].requestPointerLock();
+  }
+});
+
+$('#mainCanvas').on('mousedown', function(e) {
+  if(document.pointerLockElement === null) {
+    return;
+  }
+
+  if(unitData[playerId]) {
+    const input = unitData[playerId].input;
+
+    let mouseCode = null;
+    if(e.button == 0) {
+      mouseCode = 'mouseL';
+    } else if(e.button == 1) {
+      mouseCode = 'mouseC';
+    } else if(e.button == 2) {
+      mouseCode = 'mouseR';
+    }
+
+    if(mouseCode != null) {
+      if(input.getKeyCodeFlag('mouseL')) {
+        return;
+      }
+
+      input.keyPress(mouseCode);
+    }
+
+  }
+});
+
+$('#mainCanvas').on('mouseup', function(e) {
+  if(document.pointerLockElement === null) {
+    return;
+  }
+
+  if(unitData[playerId]) {
+    const input = unitData[playerId].input;
+
+    let mouseCode = null;
+    if(e.button == 0) {
+      mouseCode = 'mouseL';
+    } else if(e.button == 1) {
+      mouseCode = 'mouseC';
+    } else if(e.button == 2) {
+      mouseCode = 'mouseR';
+    }
+
+    if(mouseCode != null) {
+      input.keyUp(mouseCode);
+    }
+
   }
 });
 

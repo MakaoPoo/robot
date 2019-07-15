@@ -44,6 +44,7 @@ class Input {
       right: 'd',
       up: 'w',
       down: 's',
+      attack1: 'mouseL'
     }
 
     this.mouse = {
@@ -222,11 +223,11 @@ const loading = function(conditionsFunc, doneFunc) {
   }
 }
 
-const ALL_PARTS_NUMS = partsListTemplate(1, 2, 2, 2, 2, 1);
+const ALL_PARTS_NUMS = partsListTemplate(1, 2, 2, 2, 2, 2);
 const PARTS_ID_LENGTH = 3;
 const PARTS_CLASS_LIST = partsListTemplate({}, {}, {}, {}, {}, {});
 
-const ALL_MOTION_NUMS = 2;
+const ALL_MOTION_NUMS = 3;
 const MOTION_ID_LENGTH = 6;
 const MOTION_CLASS_LIST = {};
 
@@ -276,7 +277,7 @@ const GROUND_FRICTION = 1;
 
 const GRAVITY = 1;
 
-const KEY_DOUBLE_FRAME = 12;
+const KEY_DOUBLE_FRAME = 15;
 
 const FALL_MAX_SPEED = 20;
 

@@ -40,7 +40,7 @@
 
       if(leftKey && rightKey) {
         let breakAccel;
-        if(unitData.isGround()) {
+        if(unitData.isGround() && !unitData.isDash()) {
           breakAccel = spec.walkAccel;
         } else {
           breakAccel = spec.dashAccel;
@@ -56,7 +56,7 @@
         }
       } else {
         if(leftKey) {
-          if(unitData.isGround()) {
+          if(unitData.isGround() && !unitData.isDash()) {
             state.accel.x -= spec.walkAccel;
           } else {
             state.accel.x -= spec.dashAccel;
@@ -65,7 +65,7 @@
             }
           }
         } else if(rightKey) {
-          if(unitData.isGround()) {
+          if(unitData.isGround() && !unitData.isDash()) {
             state.accel.x += spec.walkAccel;
           } else {
             state.accel.x += spec.dashAccel;

@@ -22,10 +22,6 @@
 
       const stepFrame = 20;
 
-      console.log(motion.frame);
-      if(motion.frame == 0) {
-      }
-
       speed.y = 0;
 
       const deceleration = (spec.stepSpeed - 4) / stepFrame;

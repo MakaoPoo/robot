@@ -52,11 +52,11 @@
     updatePartsState(unitData) {
       this.saberAnim = (this.saberAnim + 1) % 5;
 
-      const handR = new Transform(0, 0, -10, 1);
-      unitData.setJointTransform('handR', handR);
-
-      const handL = new Transform(0, 0, -20, 1);
-      unitData.setJointTransform('handL', handL);
+      // const handR = new Transform(0, 0, -10, 1);
+      // unitData.setJointTransform('handR', handR);
+      //
+      // const handL = new Transform(0, 0, -20, 1);
+      // unitData.setJointTransform('handL', handL);
     }
 
     getImageList(unitData) {
