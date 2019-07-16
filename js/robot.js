@@ -82,6 +82,10 @@ class Unit {
     this.hitboxList = [];
   }
 
+  getMotionId() {
+    return this.motion.id;
+  }
+
   setMotion(id, option) {
     if(this.motion.id != id) {
       this.motion.frame = 0;
@@ -188,7 +192,7 @@ class Unit {
     const input = this.input;
     state.accel = {x: 0, y: 0};
 
-    if(input.getLongPressKeyFrame('attack1') == 0) {
+    if(input.getLongPressKeyFrame('attack1') == 0 && this.getMotionId() == '000000') {
       this.resetMotion('000002');
     }
 
@@ -726,6 +730,10 @@ const hitCheckLineObj = function(obj, hitboxData) {
   }
 }
 
+const effect = new Image();
+effect.src = "resource/effect.png";
+let efX, efY;
+
 const draw = function() {
   const $canvas = $('#mainCanvas');
   $canvas[0].width = $canvas[0].width;
@@ -774,6 +782,36 @@ const draw = function() {
 
     ctx.restore();
 
+  }
+
+  if(unitData[0].motion.id == '000002') {
+    ctx.save();
+    if(unitData[0].motion.frame >= 4) {
+      if(unitData[0].motion.frame <= 8) {
+        efX = unitData[0].transform.x - 80;
+        efY = unitData[0].transform.y - 30;
+      }
+
+      const alphaFrame = (unitData[0].motion.frame - 4);
+      let alpha = 1.0 / alphaFrame;
+      if(alpha < 0.05) {
+        alpha = 0;
+      }
+      ctx.globalAlpha = alpha * 1;
+      if(effect.width != 0) {
+
+        const width = effect.width * (0.8 - alpha * 0.2);
+        const height = effect.height * (0.8 - alpha * 0.2);
+
+        drawImage(ctx, effect,
+          0, 0, effect.width, effect.height,
+          efX - width / 2, efY - height / 2, width, height
+        );
+      }
+
+    }
+
+    ctx.restore();
   }
 
   const pointerImage = unitData[0].interface.getPointerImage();

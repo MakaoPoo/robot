@@ -325,6 +325,11 @@ const turnRotate = function(rotate, isLeft) {
 const complementMotion = function(motionList, frame) {
   let frame1, frame2;
 
+  const lastMotion = motionList[motionList.length - 1];
+  if(lastMotion.frame <= frame) {
+    return lastMotion.transform;
+  }
+
   for(let i = 0; i < motionList.length - 1; i++) {
     const motion1 = motionList[i];
     const motion2 = motionList[i + 1];
