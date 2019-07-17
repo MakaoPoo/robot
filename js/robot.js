@@ -1,6 +1,5 @@
 let scale = 5;
-let unitData = [];
-let playerId = 0;
+let unitData = {};
 let stageData;
 
 class Unit {
@@ -210,7 +209,7 @@ class Unit {
     }
 
     if(state.speed.x * state.accel.x <= 0) {
-      const friction = (unitData[0].isGround())? GROUND_FRICTION: AIR_FRICTION;
+      const friction = (this.isGround())? GROUND_FRICTION: AIR_FRICTION;
       if(Math.abs(state.speed.x) <= friction) {
         state.speed.x = 0;
       } else {
@@ -351,9 +350,18 @@ $(function() {
   });
 });
 
+$(window).on("beforeunload", function(e) {
+  if(userId) {
+    fireDB.collection('connected-users').doc(userId).delete();
+  }
+
+  peer.close();
+
+  return true;
+});
+
 const mainFunc = function() {
-  unitData.push(new Unit());
-  stageData = new STAGE_CLASS_LIST['000']();
+  settingFirebase();
 
   $(window).resize();
 
@@ -362,6 +370,140 @@ const mainFunc = function() {
 
   mainLoop();
 }
+
+let fireDB;
+let userId = null;
+let peer = null;
+const connectPeerList = {};
+let room = null;
+
+const settingFirebase = function() {
+  const firebaseConfig = {
+    apiKey: "AIzaSyCSWbnyqm93KHO5sumdATEHZJdum5EPN1Q",
+    authDomain: "robot-game1240.firebaseapp.com",
+    databaseURL: "https://robot-game1240.firebaseio.com",
+    projectId: "robot-game1240",
+    storageBucket: "robot-game1240.appspot.com",
+    messagingSenderId: "674008149375",
+    appId: "1:674008149375:web:66f506b480fa938d"
+  };
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+
+  fireDB = firebase.firestore();
+
+  peer = new Peer(userId, {
+    key: '40af87a6-ce27-49cf-aee0-970f0d1737ee'
+  });
+
+  peer.on('open', function() {
+    userId = peer.id;
+
+    room = peer.joinRoom("test", {
+      mode: 'mesh'
+    });
+    room.on('open', function() {
+      console.log(room.connections);
+      unitData[userId] = new Unit();
+
+      for(const id in room.connections) {
+        unitData[id] = new Unit();
+      }
+
+      room.on('data', function(data) {
+        const id = data.src;
+        if(!unitData[id]) {
+          unitData[id] = new Unit();
+        }
+        if(data.data.input) {
+          for(const key in data.data.input) {
+            unitData[id].input[key] = data.data.input[key];
+          }
+          for(const key in data.data.transform) {
+            unitData[id].transform[key] = data.data.transform[key];
+          }
+        }
+      });
+
+      room.on('peerJoin', function(id) {
+        if(!unitData[id]) {
+          unitData[id] = new Unit();
+        }
+      });
+
+      room.on('peerLeave', function(id) {
+        if(unitData[id]) {
+          delete unitData[id]
+        }
+      });
+    });
+
+    // fireDB.collection('connected-users').doc(userId).set({
+    //   name: "makapoo"
+    // }).then(function(data) {
+    //   localStorage.removeItem('userId', userId);
+    //
+    //   // connectAnother();
+    //
+    //   console.log(userId);
+    //
+    // });
+  });
+
+
+  // unitData.push(new Unit());
+  stageData = new STAGE_CLASS_LIST['000']();
+}
+
+const connectAnother = function() {
+  fireDB.collection("connected-users").onSnapshot(function(col) {
+    console.log("Current data: ", col.docs);
+
+    for(const doc of col.docs) {
+      if(!(unitData[doc.id]) && doc.id != userId) {
+        unitData[doc.id] = new Unit();
+      }
+
+      if(!connectPeerList[doc.id]) {
+        console.log(peer);
+        peer.connect(doc.id);
+
+        peer.on('connection',function(connPeer) {
+          connectPeerList[doc.id] = connPeer;
+
+          connectPeerList[doc.id].on('data', function(data) {
+            console.log('Received', data);
+          });
+
+          connectPeerList[doc.id].on('close', function() {
+            delete connectPeerList[doc.id];
+          });
+
+        });
+      }
+    }
+
+    if(Object.keys(unitData).length != col.docs.length) {
+      for(const userId in unitData) {
+        let existDB = false;
+
+        for(const doc of col.docs) {
+          if(doc.id == userId) {
+            existDB = true;
+            break;
+          }
+        }
+
+        if(!existDB) {
+          delete unitData[userId]
+        }
+      }
+    }
+
+  });
+}
+
+const peerList = [];
 
 $('#mainCanvas').on('click', function() {
   if(document.pointerLockElement === null) {
@@ -374,27 +516,29 @@ $('#mainCanvas').on('mousedown', function(e) {
     return;
   }
 
-  if(unitData[playerId]) {
-    const input = unitData[playerId].input;
-
-    let mouseCode = null;
-    if(e.button == 0) {
-      mouseCode = 'mouseL';
-    } else if(e.button == 1) {
-      mouseCode = 'mouseC';
-    } else if(e.button == 2) {
-      mouseCode = 'mouseR';
-    }
-
-    if(mouseCode != null) {
-      if(input.getKeyCodeFlag('mouseL')) {
-        return;
-      }
-
-      input.keyPress(mouseCode);
-    }
-
+  if(userId == null || !unitData[userId]) {
+    return;
   }
+
+  const input = unitData[userId].input;
+
+  let mouseCode = null;
+  if(e.button == 0) {
+    mouseCode = 'mouseL';
+  } else if(e.button == 1) {
+    mouseCode = 'mouseC';
+  } else if(e.button == 2) {
+    mouseCode = 'mouseR';
+  }
+
+  if(mouseCode != null) {
+    if(input.getKeyCodeFlag('mouseL')) {
+      return;
+    }
+
+    input.keyPress(mouseCode);
+  }
+
 });
 
 $('#mainCanvas').on('mouseup', function(e) {
@@ -402,62 +546,71 @@ $('#mainCanvas').on('mouseup', function(e) {
     return;
   }
 
-  if(unitData[playerId]) {
-    const input = unitData[playerId].input;
-
-    let mouseCode = null;
-    if(e.button == 0) {
-      mouseCode = 'mouseL';
-    } else if(e.button == 1) {
-      mouseCode = 'mouseC';
-    } else if(e.button == 2) {
-      mouseCode = 'mouseR';
-    }
-
-    if(mouseCode != null) {
-      input.keyUp(mouseCode);
-    }
-
+  if(userId == null || !unitData[userId]) {
+    return;
   }
+
+  const input = unitData[userId].input;
+
+  let mouseCode = null;
+  if(e.button == 0) {
+    mouseCode = 'mouseL';
+  } else if(e.button == 1) {
+    mouseCode = 'mouseC';
+  } else if(e.button == 2) {
+    mouseCode = 'mouseR';
+  }
+
+  if(mouseCode != null) {
+    input.keyUp(mouseCode);
+  }
+
 });
 
 $(document).on('keydown', function(e) {
-  if(unitData[playerId]) {
-    const input = unitData[playerId].input;
-
-    if(input.getKeyCodeFlag(e.key)) {
-      return;
-    }
-
-    input.keyPress(e.key);
+  if(userId == null || !unitData[userId]) {
+    return;
   }
+
+  const input = unitData[userId].input;
+
+  if(input.getKeyCodeFlag(e.key)) {
+    return;
+  }
+
+  input.keyPress(e.key);
+
 });
 
 $(document).on('keyup', function(e) {
-  if(unitData[playerId]) {
-    const input = unitData[playerId].input;
-
-    input.keyUp(e.key);
+  if(userId == null || !unitData[userId]) {
+    return;
   }
+
+  const input = unitData[userId].input;
+  input.keyUp(e.key);
 
 });
 
 $(document).on('mousemove', function(e) {
-  if(unitData[playerId]) {
-    if(document.pointerLockElement === $('#mainCanvas')[0]) {
-      const input = unitData[playerId].input;
-      e = e.originalEvent;
-
-      input.moveMouse(e.movementX, e.movementY);
-    }
+  if(userId == null || !unitData[userId]) {
+    return;
   }
+
+  if(document.pointerLockElement === $('#mainCanvas')[0]) {
+    const input = unitData[userId].input;
+    e = e.originalEvent;
+    input.moveMouse(e.movementX, e.movementY);
+  }
+
 });
 
 $('#punicon').on('touchstart', function(e) {
-  if(!unitData[playerId]) {
+  if(userId == null || !unitData[userId]) {
     return;
   }
-  const input = unitData[playerId].input;
+
+  const input = unitData[userId].input;
 
   const $punicon = $('#punicon');
   const $lever = $('#punicon_lever');
@@ -566,13 +719,25 @@ $('#punicon').on('touchstart', function(e) {
 });
 
 const mainLoop = function(){
-  unitData[0].dirTurn();
+  if(room && userId != null) {
+    for(const id in room.connections) {
+      room.send({
+        transform: unitData[userId].transform,
+        input: unitData[userId].input
+      });
+    }
+  }
 
-  unitData[0].updateUnitState();
+  for(const id in unitData) {
+    unitData[id].dirTurn();
+    unitData[id].updateUnitState();
+  }
 
   advanceFrame();
 
-  unitData[0].updateImageList();
+  for(const id in unitData) {
+    unitData[id].updateImageList();
+  }
 
   draw();
 
@@ -581,29 +746,33 @@ const mainLoop = function(){
 }
 
 const advanceFrame = function() {
-  unitData[0].state.ground.flag = false;
-  unitData[0].state.ground.angle = FLOOR_BORDER_ANGLE;
-  unitData[0].state.ground.attraction = 0;
-  unitData[0].state.frameSplitSpeed = {
-    x: unitData[0].state.speed.x / FRAME_SPLIT,
-    y: unitData[0].state.speed.y / FRAME_SPLIT
+  for(const id in unitData) {
+    unitData[id].state.ground.flag = false;
+    unitData[id].state.ground.angle = FLOOR_BORDER_ANGLE;
+    unitData[id].state.ground.attraction = 0;
+    unitData[id].state.frameSplitSpeed = {
+      x: unitData[id].state.speed.x / FRAME_SPLIT,
+      y: unitData[id].state.speed.y / FRAME_SPLIT
+    }
   }
 
   for(let frame = 0; frame < FRAME_SPLIT; frame ++) {
-    advanceOneFrame();
+    for(const id in unitData) {
+      advanceOneFrame(unitData[id]);
+    }
   }
 
 }
 
-const advanceOneFrame = function() {
-  unitData[0].transform.x += unitData[0].state.frameSplitSpeed.x;
-  unitData[0].transform.y += unitData[0].state.frameSplitSpeed.y;
+const advanceOneFrame = function(unitData) {
+  unitData.transform.x += unitData.state.frameSplitSpeed.x;
+  unitData.transform.y += unitData.state.frameSplitSpeed.y;
 
-  const unitTransform = unitData[0].transform;
-  const legJoint = unitData[0].parts.body.joint.legR;
+  const unitTransform = unitData.transform;
+  const legJoint = unitData.parts.body.joint.legR;
 
-  const collisionR = unitData[0].parts.body.collisionR;
-  const groundR = unitData[0].parts.leg.groundR;
+  const collisionR = unitData.parts.body.collisionR;
+  const groundR = unitData.parts.leg.groundR;
 
   const collision = {
     shortestD: collisionR,
@@ -643,25 +812,25 @@ const advanceOneFrame = function() {
       pushY /= -Math.cos(getRad(collision.angle));
     }
 
-    unitData[0].transform.x += pushX;
-    unitData[0].transform.y += pushY;
+    unitData.transform.x += pushX;
+    unitData.transform.y += pushY;
 
-    if(unitData[0].state.speed.x * pushX < -1) {
-      unitData[0].state.speed.x += pushX;
+    if(unitData.state.speed.x * pushX < -1) {
+      unitData.state.speed.x += pushX;
     }
-    if(unitData[0].state.speed.y * pushY < -1) {
-      unitData[0].state.speed.y += pushY;
+    if(unitData.state.speed.y * pushY < -1) {
+      unitData.state.speed.y += pushY;
     }
   }
   if(ground.flag) {
-    unitData[0].state.ground.attraction = ground.attraction;
-    unitData[0].state.ground.flag = true;
-    unitData[0].state.ground.angle = ground.angle;
+    unitData.state.ground.attraction = ground.attraction;
+    unitData.state.ground.flag = true;
+    unitData.state.ground.angle = ground.angle;
     const pushY = ground.nearestNvec.y * (ground.hitCircle.r - ground.shortestD);
-    unitData[0].transform.y += pushY / Math.cos(getRad(unitData[0].state.ground.angle));
+    unitData.transform.y += pushY / Math.cos(getRad(unitData.state.ground.angle));
 
-    if(unitData[0].state.speed.y > 1) {
-      unitData[0].state.speed.y += pushY;
+    if(unitData.state.speed.y > 1) {
+      unitData.state.speed.y += pushY;
     }
   }
 }
@@ -734,26 +903,20 @@ const effect = new Image();
 effect.src = "resource/effect.png";
 let efX, efY;
 
-const draw = function() {
-  const $canvas = $('#mainCanvas');
-  $canvas[0].width = $canvas[0].width;
-  const ctx = $canvas[0].getContext('2d');
-
-  drawStage(ctx);
-
-  unitData[0].imageList.sort(function(a, b) {
+const drawUnit = function(ctx, unitData) {
+  unitData.imageList.sort(function(a, b) {
     if(a.zIndex < b.zIndex) {
-      return (unitData[0].isLeft()? 1: -1);
+      return (unitData.isLeft()? 1: -1);
     }
     if(a.zIndex > b.zIndex) {
-      return (unitData[0].isLeft()? -1: 1);
+      return (unitData.isLeft()? -1: 1);
     }
 
     return 0;
   });
 
-  const unitTransform = unitData[0].transform;
-  for(const image of unitData[0].imageList) {
+  const unitTransform = unitData.transform;
+  for(const image of unitData.imageList) {
     const imageSrc = image.imageSrc;
     const transform = image.transform;
     const imagePos = image.imagePos;
@@ -768,7 +931,7 @@ const draw = function() {
     ctx.translate(unitTransform.x, unitTransform.y);
     ctx.rotate(getRad(unitTransform.rotate));
     ctx.scale(unitTransform.scale, unitTransform.scale);
-    if(!unitData[0].isLeft()) {
+    if(!unitData.isLeft()) {
       ctx.scale(-1, 1);
     }
     ctx.translate(transform.x, transform.y);
@@ -783,60 +946,81 @@ const draw = function() {
     ctx.restore();
 
   }
+}
 
-  if(unitData[0].motion.id == '000002') {
-    ctx.save();
-    if(unitData[0].motion.frame >= 4) {
-      if(unitData[0].motion.frame <= 8) {
-        efX = unitData[0].transform.x - 80;
-        efY = unitData[0].transform.y - 30;
-      }
+const drawUnitHitbox = function(ctx, unitData) {
+  const legJoint = unitData.parts.body.joint.legR;
+  const collisionR = unitData.parts.body.collisionR;
+  const groundR = unitData.parts.leg.groundR;
+  ctx.strokeStyle = "#0f0";
+  ctx.beginPath();
+  ctx.arc(unitTransform.x, unitTransform.y, collisionR, 0, Math.PI * 2, false);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(unitTransform.x + legJoint.x, unitTransform.y + legJoint.y, groundR, 0, Math.PI * 2, false);
+  ctx.stroke();
+}
 
-      const alphaFrame = (unitData[0].motion.frame - 4);
-      let alpha = 1.0 / alphaFrame;
-      if(alpha < 0.05) {
-        alpha = 0;
-      }
-      ctx.globalAlpha = alpha * 1;
-      if(effect.width != 0) {
+const draw = function() {
+  const $canvas = $('#mainCanvas');
+  $canvas[0].width = $canvas[0].width;
+  const ctx = $canvas[0].getContext('2d');
 
-        const width = effect.width * (0.8 - alpha * 0.2);
-        const height = effect.height * (0.8 - alpha * 0.2);
+  drawStage(ctx);
 
-        drawImage(ctx, effect,
-          0, 0, effect.width, effect.height,
-          efX - width / 2, efY - height / 2, width, height
-        );
-      }
-
-    }
-
-    ctx.restore();
+  for(const id in unitData) {
+    drawUnit(ctx, unitData[id]);
   }
 
-  const pointerImage = unitData[0].interface.getPointerImage();
+  if(userId != null && unitData[userId]) {
+    if(unitData[userId].motion.id == '000002') {
+      ctx.save();
+      if(unitData[userId].motion.frame >= 4) {
+        if(unitData[userId].motion.frame <= 8) {
+          efX = unitData[userId].transform.x - 80;
+          efY = unitData[userId].transform.y - 30;
+        }
 
-  if(pointerImage) {
-    drawImage(ctx, pointerImage.imageSrc,
-      pointerImage.x, pointerImage.y,
-      pointerImage.width, pointerImage.height,
-      unitData[0].input.getMouseX() - pointerImage.width,
-      unitData[0].input.getMouseY() - pointerImage.height,
-      pointerImage.width * 2, pointerImage.height * 2
-    );
+        const alphaFrame = (unitData[userId].motion.frame - 3);
+        let alpha = (1.0 - alphaFrame* 0.05) / (alphaFrame);
+        if(alpha < 0.05) {
+          alpha = 0;
+        }
+        ctx.globalAlpha = alpha * 1;
+        if(effect.width != 0) {
+
+          const width = effect.width * (0.8 - alpha * 0.2);
+          const height = effect.height * (0.8 - alpha * 0.2);
+
+          drawImage(ctx, effect,
+            0, 0, effect.width, effect.height,
+            efX - width / 2, efY - height / 2, width, height
+          );
+        }
+
+      }
+
+      ctx.restore();
+    }
+
+    const pointerImage = unitData[userId].interface.getPointerImage();
+
+    if(pointerImage) {
+      drawImage(ctx, pointerImage.imageSrc,
+        pointerImage.x, pointerImage.y,
+        pointerImage.width, pointerImage.height,
+        unitData[userId].input.getMouseX() - pointerImage.width,
+        unitData[userId].input.getMouseY() - pointerImage.height,
+        pointerImage.width * 2, pointerImage.height * 2
+      );
+    }
+
   }
 
   if(DRAW_HITBOX) {
-    const legJoint = unitData[0].parts.body.joint.legR;
-    const collisionR = unitData[0].parts.body.collisionR;
-    const groundR = unitData[0].parts.leg.groundR;
-    ctx.strokeStyle = "#0f0";
-    ctx.beginPath();
-    ctx.arc(unitTransform.x, unitTransform.y, collisionR, 0, Math.PI * 2, false);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(unitTransform.x + legJoint.x, unitTransform.y + legJoint.y, groundR, 0, Math.PI * 2, false);
-    ctx.stroke();
+    for(const id in unitData) {
+      drawUnitHitbox(ctx, unitData[id]);
+    }
   }
 }
 
