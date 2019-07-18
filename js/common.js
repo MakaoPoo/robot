@@ -281,6 +281,28 @@ const KEY_DOUBLE_FRAME = 15;
 
 const FALL_MAX_SPEED = 20;
 
+const getVector = function(pos1, pos2) {
+  const x = pos2.x - pos1.x;
+  const y = pos2.y - pos1.y;
+
+  const vector = {
+    x: x,
+    y: y,
+    length: Math.sqrt(x * x + y * y)
+  }
+
+  return vector;
+}
+
+const getCenterPos = function(pos1, pos2) {
+  const centerPos = {
+    x: pos1.x + (pos2.x - pos1.x) / 2,
+    y: pos1.y + (pos2.y - pos1.y) / 2
+  };
+
+  return centerPos;
+}
+
 const getDot = function(vec1, vec2) {
   return vec1.x * vec2.x + vec1.y * vec2.y;
 }
