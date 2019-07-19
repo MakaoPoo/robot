@@ -281,6 +281,10 @@ const KEY_DOUBLE_FRAME = 15;
 
 const FALL_MAX_SPEED = 20;
 
+const addPosVec = function(pos, vec) {
+  return {x: pos.x + vec.x, y: pos.y + vec.y};
+}
+
 const getVector = function(pos1, pos2) {
   const x = pos2.x - pos1.x;
   const y = pos2.y - pos1.y;
@@ -289,6 +293,18 @@ const getVector = function(pos1, pos2) {
     x: x,
     y: y,
     length: Math.sqrt(x * x + y * y)
+  }
+
+  return vector;
+}
+
+const getVecNoLength = function(pos1, pos2) {
+  const x = pos2.x - pos1.x;
+  const y = pos2.y - pos1.y;
+
+  const vector = {
+    x: x,
+    y: y,
   }
 
   return vector;
@@ -309,6 +325,36 @@ const getDot = function(vec1, vec2) {
 
 const getCrossZ = function(vec1, vec2) {
   return vec1.x * vec2.y - vec1.y * vec2.x;
+}
+
+const isInSquare = function(point, posList) {
+  const cr1 = getCrossZ(getVecNoLength(posList[0], point), getVecNoLength(posList[0], posList[1]));
+  const cr2 = getCrossZ(getVecNoLength(posList[1], point), getVecNoLength(posList[1], posList[2]));
+  const cr3 = getCrossZ(getVecNoLength(posList[2], point), getVecNoLength(posList[2], posList[3]));
+  const cr4 = getCrossZ(getVecNoLength(posList[3], point), getVecNoLength(posList[3], posList[0]));
+
+  return (cr1 <= 0 && cr2 <= 0 && cr3 <= 0 && cr4 <= 0);
+}
+
+const getLineCrossPoint = function(l1s, l1e, l2s, l2e) {
+  const a1 = l1e.y - l1s.y;
+  const b1 = -(l1e.x - l1s.x);
+  const c1 = - (a1 * l1s.x + b1 * l1s.y);
+
+  const a2 = l2e.y - l2s.y;
+  const b2 = -(l2e.x - l2s.x);
+  const c2 = - (a2 * l2s.x + b2 * l2s.y);
+
+  if(a1 * b2 - a2 * b1 == 0) {
+    return null;
+  }
+
+  const cross = {
+    x: (b1 * c2 - b2 * c1) / (a1 * b2 - a2 * b1),
+    y: (a2 * c1 - a1 * c2) / (a1 * b2 - a2 * b1)
+  }
+
+  return cross;
 }
 
 const getRad = function(deg) {

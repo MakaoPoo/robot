@@ -961,6 +961,19 @@ const drawUnitHitbox = function(ctx, unitData) {
   ctx.stroke();
 }
 
+const kisekiSetFrame = 1;
+let kisekiNum = 20 / kisekiSetFrame;
+
+let kiseki = [];
+let kisekiHeight = [];
+
+for(let i = 0; i <= kisekiNum; i++) {
+  kiseki.push({start: {x: 0, y: 0}, end: {x: 0, y: 0}});
+  kisekiHeight.push(effect.height*i/kisekiNum);
+}
+
+let kisekiFrame = 0;
+
 const draw = function() {
   const $canvas = $('#mainCanvas');
   $canvas[0].width = $canvas[0].width;
@@ -973,13 +986,24 @@ const draw = function() {
   }
 
   if(unitData[userId]) {
+    kisekiFrame = (kisekiFrame + 1) % kisekiSetFrame;
+    if(kisekiFrame == 0) {
+      for(let i = 0; i < kiseki.length - 1; i++) {
+        kiseki[i] = kiseki[i + 1];
+      }
+    }
 
-    drawDaikei(ctx, effect, [
-      {x: 100, y: 100},
-      {x: 400, y: 200},
-      {x: 300 + unitData[userId].transform.x, y: 30 + unitData[userId].transform.y},
-      {x: 0, y: 600},
-    ]);
+    const sbX = unitData[userId].transform.x - 150;
+    const sbY = unitData[userId].transform.y - 70;
+    kiseki[kiseki.length - 1] = {
+      start: {x: sbX, y: sbY},
+      end: {x: sbX + 130 , y: sbY + 85}
+    }
+
+    drawPathImage(ctx, effect,
+      kisekiHeight,
+      kiseki
+    );
   }
 
   if(userId != null && unitData[userId]) {
@@ -1034,86 +1058,92 @@ const draw = function() {
   }
 }
 
-const drawDaikei = function(ctx, image, posList) {
-  const edgeCenterPos = [
-    getCenterPos(posList[0], posList[1]),
-    getCenterPos(posList[1], posList[2]),
-    getCenterPos(posList[2], posList[3]),
-    getCenterPos(posList[3], posList[0])
-  ];
+const drawPathImage = function(ctx, image, pointList, lineList) {
+  if(pointList.length != lineList.length) {
+    return;
+  }
 
-  const halfCenterPos = [
-    getCenterPos(edgeCenterPos[0], edgeCenterPos[2]),
-    getCenterPos(edgeCenterPos[1], edgeCenterPos[3])
-  ];
+  for(let i = 0; i < pointList.length - 1; i++) {
+    const line1 = lineList[i];
+    const line2 = lineList[i + 1];
+    const point = {
+      start: pointList[i],
+      end: pointList[i + 1]
+    }
 
-  const centerPos = getCenterPos(halfCenterPos[0], halfCenterPos[1]);
+    const halfCenterPos = [
+      getCenterPos(line1.start, line2.end),
+      getCenterPos(line2.start, line1.end)
+    ];
 
-  drawSkewImage(ctx, image, posList[0], posList[1], centerPos, 0);
-  drawSkewImage(ctx, image, posList[1], posList[2], centerPos, 1);
-  drawSkewImage(ctx, image, posList[2], posList[3], centerPos, 2);
-  drawSkewImage(ctx, image, posList[3], posList[0], centerPos, 3);
+    const centerPos = getCenterPos(halfCenterPos[0], halfCenterPos[1]);
 
-  // ctx.beginPath();
-  // ctx.moveTo(posList[0].x, posList[0].y);
-  // ctx.lineTo(posList[1].x, posList[1].y);
-  // ctx.lineTo(posList[2].x, posList[2].y);
-  // ctx.lineTo(posList[3].x, posList[3].y);
-  // ctx.lineTo(posList[0].x, posList[0].y);
-  // ctx.moveTo(posList[0].x, posList[0].y);
-  // ctx.lineTo(centerPos.x, centerPos.y);
-  // ctx.lineTo(posList[2].x, posList[2].y);
-  // ctx.moveTo(posList[1].x, posList[1].y);
-  // ctx.lineTo(centerPos.x, centerPos.y);
-  // ctx.lineTo(posList[3].x, posList[3].y);
-  // ctx.stroke();
-  // ctx.closePath();
+    drawSkewImage(ctx, image, point, line1.start, line1.end, centerPos, 0);
+    drawSkewImage(ctx, image, point, line1.end, line2.end, centerPos, 1);
+    drawSkewImage(ctx, image, point, line2.end, line2.start, centerPos, 2);
+    drawSkewImage(ctx, image, point, line2.start, line1.start, centerPos, 3);
+  }
 
 }
 
-const drawSkewImage = function(ctx, image, pos1, pos2, posC, areaNum) {
+const drawSkewImage = function(ctx, image, point, pos1, pos2, posC, areaNum) {
   const vecEdge = getVector(pos1, pos2);
-  const vecToC = getVector(pos1, posC);
-  const verVec1Length = getCrossZ(vecEdge, vecToC) / vecEdge.length;
-  const skew = getDot(vecEdge, vecToC) / vecEdge.length - vecEdge.length / 2;
+  const vec1C = getVector(pos1, posC);
+  const vec2C = getVector(pos2, posC);
+  const verVec1Length = getCrossZ(vecEdge, vec1C) / vecEdge.length;
+  const skew = getDot(vecEdge, vec1C) / vecEdge.length - vecEdge.length / 2;
 
   ctx.save();
 
   ctx.beginPath();
-  const expand = 0.25;
-  const expandVec = {
-    x: expand * vecToC.x / vecToC.length,
-    y: expand * vecToC.y / vecToC.length
+
+  const len1 = vec2C.length;
+  const len2 = vec1C.length;
+  const lenC = vecEdge.length;
+
+  const triCenter = {
+    x: (pos1.x * len1 + pos2.x * len2 + posC.x * lenC) / (len1 + len2 + lenC),
+    y: (pos1.y * len1 + pos2.y * len2 + posC.y * lenC) / (len1 + len2 + lenC)
   }
-  ctx.moveTo(pos1.x + expandVec.x, pos1.y + expandVec.y);
-  ctx.lineTo(posC.x + expandVec.x, posC.y + expandVec.y);
-  ctx.lineTo(pos2.x + expandVec.x, pos2.y + expandVec.y);
+
+  const expand = 0.005;
+  const vecT1 = getVecNoLength(triCenter, pos1);
+  const vecT2 = getVecNoLength(triCenter, pos2);
+  const vecTC = getVecNoLength(triCenter, posC);
+
+  ctx.moveTo(pos1.x + vecT1.x * expand, pos1.y + vecT1.y * expand);
+  ctx.lineTo(posC.x + vecTC.x * expand, posC.y + vecTC.y * expand);
+  ctx.lineTo(pos2.x + vecT2.x * expand, pos2.y + vecT2.y * expand);
   ctx.closePath();
   ctx.clip();
 
   ctx.translate(pos1.x, pos1.y);
   ctx.rotate(Math.atan2(vecEdge.y, vecEdge.x));
+
+  const imageAreaHeight = point.end - point.start;
+
   switch(areaNum) {
     case 0:
-    ctx.transform(vecEdge.length / image.width, 0, 2 * skew / image.height, verVec1Length / image.height * 2, 0, 0);
+    ctx.transform(vecEdge.length / image.width, 0, 2 * skew / imageAreaHeight, verVec1Length / imageAreaHeight * 2, 0, 0);
+    ctx.translate(0, -point.start);
     break;
 
     case 1:
-    ctx.transform(vecEdge.length / image.height, 0, 2 * skew / image.width, verVec1Length / image.width * 2, 0, 0);
+    ctx.transform(vecEdge.length / imageAreaHeight, 0, 2 * skew / image.width, verVec1Length / image.width * 2, 0, 0);
     ctx.rotate(getRad(-90));
-    ctx.translate(-image.width, 0);
+    ctx.translate(-image.width, -point.start);
     break;
 
     case 2:
-    ctx.transform(vecEdge.length / image.width, 0, 2 * skew / image.height, verVec1Length / image.height * 2, 0, 0);
+    ctx.transform(vecEdge.length / image.width, 0, 2 * skew / imageAreaHeight, verVec1Length / imageAreaHeight * 2, 0, 0);
     ctx.rotate(getRad(-180));
-    ctx.translate(-image.width, -image.height);
+    ctx.translate(-image.width, -point.end);
     break;
 
     case 3:
-    ctx.transform(vecEdge.length / image.height, 0, 2 * skew / image.width, verVec1Length / image.width * 2, 0, 0);
+    ctx.transform(vecEdge.length / imageAreaHeight, 0, 2 * skew / image.width, verVec1Length / image.width * 2, 0, 0);
     ctx.rotate(getRad(-270));
-    ctx.translate(0, -image.height);
+    ctx.translate(0, -point.end);
     break;
   }
 
